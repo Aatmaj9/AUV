@@ -61,10 +61,8 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-message-filters \
       ros-humble-camera-info-manager \
       ros-humble-pointcloud-to-laserscan \
-      ros-humble-laser-filters \
-      python3-opencv \
-      gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi bossa-cli \
-      python3-numpy python3-scipy \
+      ros-humble-laser-filters \\
+      gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi bossa-cli \\
  && ln -sf /usr/bin/python3 /usr/bin/python \
  && chmod -R a+rX /usr/local/lib/python3.10/dist-packages /usr/lib/python3/dist-packages \
  && rm -rf /var/lib/apt/lists/*
