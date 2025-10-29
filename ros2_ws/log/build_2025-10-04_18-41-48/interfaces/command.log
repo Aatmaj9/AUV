@@ -1,1 +1,0 @@
-Invoking command in '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/interfaces': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/aatmaj/Sookshma-Jetson/ros2_ws/src/interfaces -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/interfaces
