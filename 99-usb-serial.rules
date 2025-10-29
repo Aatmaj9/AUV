@@ -1,0 +1,4 @@
+SUBSYSTEMS=="usb", ATTRS{product}=="USB-RS232 Cable", ATTRS{serial}=="AU06B5E4", SYMLINK+="sbg", GROUP="dialout", MODE="0660"
+SUBSYSTEMS=="usb", ATTRS{product}=="u-blox GNSS receiver", SYMLINK+="ardusimple", GROUP="dialout", MODE="0660"
+SUBSYSTEMS=="usb", ATTRS{manufacturer}=="Arduino (www.arduino.cc)", SYMLINK+="arduino", GROUP="dialout", MODE="0660"
+SUBSYSTEMS=="usb", ATTRS{product}=="ZED 2i", ATTRS{manufacturer}=="Technologies, Inc.", SYMLINK+="zed", GROUP="video", MODE="0660"

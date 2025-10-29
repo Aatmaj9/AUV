@@ -1,0 +1,277 @@
+[0.000000] (-) TimerEvent: {}
+[0.000256] (interfaces) JobQueued: {'identifier': 'interfaces', 'dependencies': OrderedDict()}
+[0.000373] (sbg_driver) JobQueued: {'identifier': 'sbg_driver', 'dependencies': OrderedDict()}
+[0.000402] (velodyne_laserscan) JobQueued: {'identifier': 'velodyne_laserscan', 'dependencies': OrderedDict()}
+[0.000425] (velodyne_msgs) JobQueued: {'identifier': 'velodyne_msgs', 'dependencies': OrderedDict()}
+[0.000447] (zed_components) JobQueued: {'identifier': 'zed_components', 'dependencies': OrderedDict()}
+[0.000468] (velodyne_driver) JobQueued: {'identifier': 'velodyne_driver', 'dependencies': OrderedDict([('velodyne_msgs', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_msgs')])}
+[0.000493] (velodyne_pointcloud) JobQueued: {'identifier': 'velodyne_pointcloud', 'dependencies': OrderedDict([('velodyne_msgs', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_msgs')])}
+[0.000516] (zed_wrapper) JobQueued: {'identifier': 'zed_wrapper', 'dependencies': OrderedDict([('zed_components', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/zed_components')])}
+[0.000538] (velodyne) JobQueued: {'identifier': 'velodyne', 'dependencies': OrderedDict([('velodyne_laserscan', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_laserscan'), ('velodyne_msgs', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_msgs'), ('velodyne_driver', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_driver'), ('velodyne_pointcloud', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_pointcloud')])}
+[0.000566] (zed_ros2) JobQueued: {'identifier': 'zed_ros2', 'dependencies': OrderedDict([('zed_components', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/zed_components'), ('zed_wrapper', '/home/aatmaj/Sookshma-Jetson/ros2_ws/install/zed_wrapper')])}
+[0.000591] (velodyne_msgs) JobStarted: {'identifier': 'velodyne_msgs'}
+[0.005365] (zed_components) JobStarted: {'identifier': 'zed_components'}
+[0.008482] (velodyne_laserscan) JobStarted: {'identifier': 'velodyne_laserscan'}
+[0.011352] (interfaces) JobStarted: {'identifier': 'interfaces'}
+[0.014119] (sbg_driver) JobStarted: {'identifier': 'sbg_driver'}
+[0.018311] (velodyne_msgs) JobProgress: {'identifier': 'velodyne_msgs', 'progress': 'cmake'}
+[0.018707] (velodyne_msgs) Command: {'cmd': ['/usr/bin/cmake', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src/velodyne/velodyne_msgs', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_msgs'], 'cwd': '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_msgs', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_IN:en'), ('USER', 'aatmaj'), ('MATHEMATICA_HOME', '/home/guildstudent/Wolfram/Mathematica/13.2'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/aatmaj'), ('OLDPWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '3137'), ('SYSTEMD_EXEC_PID', '3338'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1003/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '4256'), ('MANDATORY_PATH', '/usr/share/gconf/ubuntu.mandatory.path'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'aatmaj'), ('JOURNAL_STREAM', '8:28401'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('DEFAULTS_PATH', '/usr/share/gconf/ubuntu.default.path'), ('USERNAME', 'aatmaj'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/home/aatmaj/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/aatmaj/bin'), ('SESSION_MANAGER', 'local/mav-lab-invento:@/tmp/.ICE-unix/3314,unix/mav-lab-invento:/tmp/.ICE-unix/3314'), ('INVOCATION_ID', '9c577ff0eb3b447db9126c384f245c65'), ('XDG_MENU_PREFIX', 'gnome-'), ('XDG_RUNTIME_DIR', '/run/user/1003'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1003/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1003/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:768e00da-f9d7-46a7-8ff9-7b3b8460c65a'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GPG_AGENT_INFO', '/run/user/1003/gnupg/S.gpg-agent:0:1'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_msgs'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.021302] (zed_components) JobProgress: {'identifier': 'zed_components', 'progress': 'cmake'}
+[0.021672] (zed_components) Command: {'cmd': ['/usr/bin/cmake', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src/zed-ros2-wrapper/zed_components', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/zed_components'], 'cwd': '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/zed_components', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_IN:en'), ('USER', 'aatmaj'), ('MATHEMATICA_HOME', '/home/guildstudent/Wolfram/Mathematica/13.2'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/aatmaj'), ('OLDPWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '3137'), ('SYSTEMD_EXEC_PID', '3338'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1003/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '4256'), ('MANDATORY_PATH', '/usr/share/gconf/ubuntu.mandatory.path'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'aatmaj'), ('JOURNAL_STREAM', '8:28401'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('DEFAULTS_PATH', '/usr/share/gconf/ubuntu.default.path'), ('USERNAME', 'aatmaj'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/home/aatmaj/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/aatmaj/bin'), ('SESSION_MANAGER', 'local/mav-lab-invento:@/tmp/.ICE-unix/3314,unix/mav-lab-invento:/tmp/.ICE-unix/3314'), ('INVOCATION_ID', '9c577ff0eb3b447db9126c384f245c65'), ('XDG_MENU_PREFIX', 'gnome-'), ('XDG_RUNTIME_DIR', '/run/user/1003'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1003/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1003/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:768e00da-f9d7-46a7-8ff9-7b3b8460c65a'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GPG_AGENT_INFO', '/run/user/1003/gnupg/S.gpg-agent:0:1'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/zed_components'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.024061] (velodyne_laserscan) JobProgress: {'identifier': 'velodyne_laserscan', 'progress': 'cmake'}
+[0.024367] (velodyne_laserscan) Command: {'cmd': ['/usr/bin/cmake', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src/velodyne/velodyne_laserscan', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/velodyne_laserscan'], 'cwd': '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_IN:en'), ('USER', 'aatmaj'), ('MATHEMATICA_HOME', '/home/guildstudent/Wolfram/Mathematica/13.2'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/aatmaj'), ('OLDPWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '3137'), ('SYSTEMD_EXEC_PID', '3338'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1003/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '4256'), ('MANDATORY_PATH', '/usr/share/gconf/ubuntu.mandatory.path'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'aatmaj'), ('JOURNAL_STREAM', '8:28401'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('DEFAULTS_PATH', '/usr/share/gconf/ubuntu.default.path'), ('USERNAME', 'aatmaj'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/home/aatmaj/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/aatmaj/bin'), ('SESSION_MANAGER', 'local/mav-lab-invento:@/tmp/.ICE-unix/3314,unix/mav-lab-invento:/tmp/.ICE-unix/3314'), ('INVOCATION_ID', '9c577ff0eb3b447db9126c384f245c65'), ('XDG_MENU_PREFIX', 'gnome-'), ('XDG_RUNTIME_DIR', '/run/user/1003'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1003/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1003/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:768e00da-f9d7-46a7-8ff9-7b3b8460c65a'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GPG_AGENT_INFO', '/run/user/1003/gnupg/S.gpg-agent:0:1'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.026304] (interfaces) JobProgress: {'identifier': 'interfaces', 'progress': 'cmake'}
+[0.026669] (interfaces) Command: {'cmd': ['/usr/bin/cmake', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src/interfaces', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/interfaces'], 'cwd': '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/interfaces', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_IN:en'), ('USER', 'aatmaj'), ('MATHEMATICA_HOME', '/home/guildstudent/Wolfram/Mathematica/13.2'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/aatmaj'), ('OLDPWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '3137'), ('SYSTEMD_EXEC_PID', '3338'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1003/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '4256'), ('MANDATORY_PATH', '/usr/share/gconf/ubuntu.mandatory.path'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'aatmaj'), ('JOURNAL_STREAM', '8:28401'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('DEFAULTS_PATH', '/usr/share/gconf/ubuntu.default.path'), ('USERNAME', 'aatmaj'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/home/aatmaj/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/aatmaj/bin'), ('SESSION_MANAGER', 'local/mav-lab-invento:@/tmp/.ICE-unix/3314,unix/mav-lab-invento:/tmp/.ICE-unix/3314'), ('INVOCATION_ID', '9c577ff0eb3b447db9126c384f245c65'), ('XDG_MENU_PREFIX', 'gnome-'), ('XDG_RUNTIME_DIR', '/run/user/1003'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1003/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1003/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:768e00da-f9d7-46a7-8ff9-7b3b8460c65a'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GPG_AGENT_INFO', '/run/user/1003/gnupg/S.gpg-agent:0:1'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/interfaces'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.030989] (sbg_driver) JobProgress: {'identifier': 'sbg_driver', 'progress': 'cmake'}
+[0.031588] (sbg_driver) Command: {'cmd': ['/usr/bin/cmake', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src/sbg_ros2_driver', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/sbg_driver'], 'cwd': '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/sbg_driver', 'env': OrderedDict([('GJS_DEBUG_TOPICS', 'JS ERROR;JS LOG'), ('LESSOPEN', '| /usr/bin/lesspipe %s'), ('LANGUAGE', 'en_IN:en'), ('USER', 'aatmaj'), ('MATHEMATICA_HOME', '/home/guildstudent/Wolfram/Mathematica/13.2'), ('XDG_SESSION_TYPE', 'x11'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/home/aatmaj'), ('OLDPWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/src'), ('DESKTOP_SESSION', 'ubuntu'), ('GIO_LAUNCHED_DESKTOP_FILE', '/usr/share/applications/terminator.desktop'), ('ROS_PYTHON_VERSION', '3'), ('GNOME_SHELL_SESSION_MODE', 'ubuntu'), ('GTK_MODULES', 'gail:atk-bridge'), ('MANAGERPID', '3137'), ('SYSTEMD_EXEC_PID', '3338'), ('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/run/user/1003/bus'), ('COLORTERM', 'truecolor'), ('TERMINATOR_DBUS_NAME', 'net.tenshu.Terminator23558193cd9818af7fe4d2c2f5bd9d00f'), ('GIO_LAUNCHED_DESKTOP_FILE_PID', '4256'), ('MANDATORY_PATH', '/usr/share/gconf/ubuntu.mandatory.path'), ('ROS_DISTRO', 'humble'), ('GTK_IM_MODULE', 'ibus'), ('LOGNAME', 'aatmaj'), ('JOURNAL_STREAM', '8:28401'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('XDG_SESSION_CLASS', 'user'), ('DEFAULTS_PATH', '/usr/share/gconf/ubuntu.default.path'), ('USERNAME', 'aatmaj'), ('TERM', 'xterm-256color'), ('GNOME_DESKTOP_SESSION_ID', 'this-is-deprecated'), ('ROS_LOCALHOST_ONLY', '0'), ('WINDOWPATH', '2'), ('PATH', '/opt/ros/humble/bin:/home/aatmaj/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/aatmaj/bin'), ('SESSION_MANAGER', 'local/mav-lab-invento:@/tmp/.ICE-unix/3314,unix/mav-lab-invento:/tmp/.ICE-unix/3314'), ('INVOCATION_ID', '9c577ff0eb3b447db9126c384f245c65'), ('XDG_MENU_PREFIX', 'gnome-'), ('XDG_RUNTIME_DIR', '/run/user/1003'), ('DISPLAY', ':1'), ('TERMINATOR_DBUS_PATH', '/net/tenshu/Terminator2'), ('LANG', 'en_US.UTF-8'), ('XDG_CURRENT_DESKTOP', 'ubuntu:GNOME'), ('XMODIFIERS', '@im=ibus'), ('XDG_SESSION_DESKTOP', 'ubuntu'), ('XAUTHORITY', '/run/user/1003/gdm/Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('SSH_AGENT_LAUNCHER', 'gnome-keyring'), ('SSH_AUTH_SOCK', '/run/user/1003/keyring/ssh'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('SHELL', '/bin/bash'), ('TERMINATOR_UUID', 'urn:uuid:768e00da-f9d7-46a7-8ff9-7b3b8460c65a'), ('QT_ACCESSIBILITY', '1'), ('GDMSESSION', 'ubuntu'), ('LESSCLOSE', '/usr/bin/lesspipe %s %s'), ('GPG_AGENT_INFO', '/run/user/1003/gnupg/S.gpg-agent:0:1'), ('GJS_DEBUG_OUTPUT', 'stderr'), ('QT_IM_MODULE', 'ibus'), ('PWD', '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/sbg_driver'), ('LC_ALL', 'en_US.UTF-8'), ('XDG_CONFIG_DIRS', '/etc/xdg/xdg-ubuntu:/etc/xdg'), ('XDG_DATA_DIRS', '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('COLCON', '1'), ('VTE_VERSION', '6800'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.087092] (velodyne_laserscan) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.091205] (zed_components) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.092145] (velodyne_msgs) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.098249] (interfaces) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.098545] (sbg_driver) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.099142] (-) TimerEvent: {}
+[0.158955] (velodyne_laserscan) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.159479] (zed_components) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.166737] (velodyne_msgs) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.167971] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.168822] (zed_components) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.170203] (interfaces) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.173817] (sbg_driver) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.174220] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.181181] (interfaces) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.188189] (sbg_driver) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.199254] (-) TimerEvent: {}
+[0.251308] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.252397] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.255585] (zed_components) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.263350] (velodyne_laserscan) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.263639] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.264129] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.264728] (velodyne_msgs) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.265036] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.265534] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.266012] (zed_components) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.266309] (zed_components) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.266823] (zed_components) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.268261] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.269336] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.270478] (interfaces) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.270594] (zed_components) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.280296] (interfaces) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.280608] (interfaces) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.280951] (sbg_driver) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.281136] (interfaces) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.284989] (interfaces) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.291884] (sbg_driver) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.292214] (sbg_driver) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.292687] (sbg_driver) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.297266] (sbg_driver) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.299315] (-) TimerEvent: {}
+[0.361980] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.363055] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.368254] (zed_components) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.370394] (velodyne_msgs) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.370679] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.371131] (velodyne_msgs) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.371267] (velodyne_laserscan) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.371477] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.371938] (velodyne_laserscan) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.373973] (velodyne_laserscan) StdoutLine: {'line': b'-- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)\n'}
+[0.374920] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.378445] (zed_components) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.378828] (zed_components) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.379407] (zed_components) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.388581] (interfaces) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.397399] (zed_components) StderrLine: {'line': b'\x1b[31mCMake Error at CMakeLists.txt:84 (find_package):\n'}
+[0.397537] (zed_components) StderrLine: {'line': b'  By not providing "FindZED.cmake" in CMAKE_MODULE_PATH this project has\n'}
+[0.397613] (zed_components) StderrLine: {'line': b'  asked CMake to find a package configuration file provided by "ZED", but\n'}
+[0.397681] (zed_components) StderrLine: {'line': b'  CMake did not find one.\n'}
+[0.397746] (zed_components) StderrLine: {'line': b'\n'}
+[0.397812] (zed_components) StderrLine: {'line': b'  Could not find a package configuration file provided by "ZED" with any of\n'}
+[0.397886] (zed_components) StderrLine: {'line': b'  the following names:\n'}
+[0.397952] (zed_components) StderrLine: {'line': b'\n'}
+[0.398016] (zed_components) StderrLine: {'line': b'    ZEDConfig.cmake\n'}
+[0.398081] (zed_components) StderrLine: {'line': b'    zed-config.cmake\n'}
+[0.398146] (zed_components) StderrLine: {'line': b'\n'}
+[0.398210] (zed_components) StderrLine: {'line': b'  Add the installation prefix of "ZED" to CMAKE_PREFIX_PATH or set "ZED_DIR"\n'}
+[0.398275] (zed_components) StderrLine: {'line': b'  to a directory containing one of the above files.  If "ZED" provides a\n'}
+[0.398340] (zed_components) StderrLine: {'line': b'  separate development package or SDK, be sure it has been installed.\n'}
+[0.398436] (zed_components) StderrLine: {'line': b'\n'}
+[0.398502] (zed_components) StderrLine: {'line': b'\x1b[0m\n'}
+[0.398567] (zed_components) StdoutLine: {'line': b'-- Configuring incomplete, errors occurred!\n'}
+[0.398637] (zed_components) StdoutLine: {'line': b'See also "/home/aatmaj/Sookshma-Jetson/ros2_ws/build/zed_components/CMakeFiles/CMakeOutput.log".\n'}
+[0.399369] (-) TimerEvent: {}
+[0.402729] (zed_components) CommandEnded: {'returncode': 1}
+[0.405990] (sbg_driver) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.407838] (interfaces) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.408280] (interfaces) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.408959] (interfaces) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.411798] (interfaces) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.431810] (zed_components) JobEnded: {'identifier': 'zed_components', 'rc': 1}
+[0.432726] (sbg_driver) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.433470] (sbg_driver) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.435057] (sbg_driver) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.440747] (sbg_driver) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[0.499523] (-) TimerEvent: {}
+[0.552255] (velodyne_msgs) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.590430] (velodyne_laserscan) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.599629] (-) TimerEvent: {}
+[0.605104] (interfaces) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.639014] (sbg_driver) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[0.643565] (velodyne_msgs) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[0.678195] (velodyne_msgs) StdoutLine: {'line': b'-- Found builtin_interfaces: 1.2.2 (/opt/ros/humble/share/builtin_interfaces/cmake)\n'}
+[0.678487] (velodyne_laserscan) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[0.680840] (interfaces) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[0.699715] (-) TimerEvent: {}
+[0.711495] (sbg_driver) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[0.719673] (velodyne_msgs) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.7 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.725477] (velodyne_msgs) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.7 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.729700] (interfaces) StdoutLine: {'line': b'-- Found std_msgs: 4.9.0 (/opt/ros/humble/share/std_msgs/cmake)\n'}
+[0.729979] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rclcpp: 16.0.15 (/opt/ros/humble/share/rclcpp/cmake)\n'}
+[0.735770] (velodyne_msgs) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.7 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.751310] (velodyne_msgs) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.770906] (velodyne_msgs) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.774923] (sbg_driver) StdoutLine: {'line': b'-- Found rclcpp: 16.0.15 (/opt/ros/humble/share/rclcpp/cmake)\n'}
+[0.779426] (interfaces) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.7 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.784216] (interfaces) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.7 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.786693] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.7 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.787876] (velodyne_msgs) StdoutLine: {'line': b'-- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)\n'}
+[0.791909] (interfaces) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.7 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.792291] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.7 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.797763] (velodyne_msgs) StdoutLine: {'line': b'-- Found std_msgs: 4.9.0 (/opt/ros/humble/share/std_msgs/cmake)\n'}
+[0.799817] (-) TimerEvent: {}
+[0.801929] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.7 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.803255] (interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.816603] (velodyne_laserscan) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.818435] (interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.836049] (velodyne_laserscan) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.844002] (interfaces) StdoutLine: {'line': b'-- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)\n'}
+[0.846329] (sbg_driver) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.7 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[0.851840] (sbg_driver) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.7 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[0.861557] (sbg_driver) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.7 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[0.876336] (sbg_driver) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.895597] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[0.896072] (sbg_driver) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.899049] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.8 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[0.899905] (-) TimerEvent: {}
+[0.948446] (sbg_driver) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[0.951189] (sbg_driver) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.8 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[1.000058] (-) TimerEvent: {}
+[1.033327] (velodyne_laserscan) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[1.068827] (sbg_driver) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[1.077480] (velodyne_laserscan) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[1.100237] (-) TimerEvent: {}
+[1.114135] (sbg_driver) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[1.142655] (velodyne_laserscan) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[1.157996] (velodyne_laserscan) StdoutLine: {'line': b'-- Looking for pthread.h\n'}
+[1.160507] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake_cppcheck: 0.12.14 (/opt/ros/humble/share/ament_cmake_cppcheck/cmake)\n'}
+[1.163940] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake_cpplint: 0.12.14 (/opt/ros/humble/share/ament_cmake_cpplint/cmake)\n'}
+[1.166831] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake_uncrustify: 0.12.14 (/opt/ros/humble/share/ament_cmake_uncrustify/cmake)\n'}
+[1.170222] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)\n'}
+[1.182895] (sbg_driver) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[1.193125] (sbg_driver) StdoutLine: {'line': b'-- Looking for pthread.h\n'}
+[1.200371] (-) TimerEvent: {}
+[1.216685] (interfaces) StdoutLine: {'line': b'-- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)\n'}
+[1.262698] (velodyne_laserscan) StdoutLine: {'line': b'-- Looking for pthread.h - found\n'}
+[1.263131] (velodyne_laserscan) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n'}
+[1.287041] (sbg_driver) StdoutLine: {'line': b'-- Looking for pthread.h - found\n'}
+[1.287841] (sbg_driver) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n'}
+[1.300372] (-) TimerEvent: {}
+[1.368855] (velodyne_laserscan) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success\n'}
+[1.371270] (velodyne_laserscan) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[1.391466] (sbg_driver) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success\n'}
+[1.395425] (sbg_driver) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[1.400469] (-) TimerEvent: {}
+[1.461213] (velodyne_laserscan) StdoutLine: {'line': b'-- Found rclcpp_components: 16.0.15 (/opt/ros/humble/share/rclcpp_components/cmake)\n'}
+[1.499833] (sbg_driver) StdoutLine: {'line': b'-- Found sensor_msgs: 4.9.0 (/opt/ros/humble/share/sensor_msgs/cmake)\n'}
+[1.500567] (-) TimerEvent: {}
+[1.503880] (velodyne_laserscan) StdoutLine: {'line': b'-- Found sensor_msgs: 4.9.0 (/opt/ros/humble/share/sensor_msgs/cmake)\n'}
+[1.551705] (velodyne_laserscan) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.12.14 (/opt/ros/humble/share/ament_lint_auto/cmake)\n'}
+[1.557992] (sbg_driver) StdoutLine: {'line': b'-- Found std_srvs: 4.9.0 (/opt/ros/humble/share/std_srvs/cmake)\n'}
+[1.574633] (sbg_driver) StdoutLine: {'line': b'-- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)\n'}
+[1.586458] (sbg_driver) StdoutLine: {'line': b'-- Found nav_msgs: 4.9.0 (/opt/ros/humble/share/nav_msgs/cmake)\n'}
+[1.600710] (-) TimerEvent: {}
+[1.627773] (sbg_driver) StderrLine: {'line': b'\x1b[31mCMake Error at CMakeLists.txt:12 (find_package):\n'}
+[1.628259] (sbg_driver) StderrLine: {'line': b'  By not providing "Findrtcm_msgs.cmake" in CMAKE_MODULE_PATH this project\n'}
+[1.628481] (sbg_driver) StderrLine: {'line': b'  has asked CMake to find a package configuration file provided by\n'}
+[1.628660] (sbg_driver) StderrLine: {'line': b'  "rtcm_msgs", but CMake did not find one.\n'}
+[1.628825] (sbg_driver) StderrLine: {'line': b'\n'}
+[1.628990] (sbg_driver) StderrLine: {'line': b'  Could not find a package configuration file provided by "rtcm_msgs" with\n'}
+[1.629156] (sbg_driver) StderrLine: {'line': b'  any of the following names:\n'}
+[1.629315] (sbg_driver) StderrLine: {'line': b'\n'}
+[1.629501] (sbg_driver) StderrLine: {'line': b'    rtcm_msgsConfig.cmake\n'}
+[1.629679] (sbg_driver) StderrLine: {'line': b'    rtcm_msgs-config.cmake\n'}
+[1.629839] (sbg_driver) StderrLine: {'line': b'\n'}
+[1.629995] (sbg_driver) StderrLine: {'line': b'  Add the installation prefix of "rtcm_msgs" to CMAKE_PREFIX_PATH or set\n'}
+[1.630153] (sbg_driver) StderrLine: {'line': b'  "rtcm_msgs_DIR" to a directory containing one of the above files.  If\n'}
+[1.630308] (sbg_driver) StderrLine: {'line': b'  "rtcm_msgs" provides a separate development package or SDK, be sure it has\n'}
+[1.630485] (sbg_driver) StderrLine: {'line': b'  been installed.\n'}
+[1.630643] (sbg_driver) StderrLine: {'line': b'\n'}
+[1.630872] (sbg_driver) StderrLine: {'line': b'\x1b[0m\n'}
+[1.631173] (sbg_driver) StdoutLine: {'line': b'-- Configuring incomplete, errors occurred!\n'}
+[1.631376] (sbg_driver) StdoutLine: {'line': b'See also "/home/aatmaj/Sookshma-Jetson/ros2_ws/build/sbg_driver/CMakeFiles/CMakeOutput.log".\n'}
+[1.643946] (sbg_driver) JobEnded: {'identifier': 'sbg_driver', 'rc': 'SIGINT'}
+[1.647880] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'copyright' to check source files copyright and LICENSE\n"}
+[1.650586] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'cppcheck' to perform static code analysis on C / C++ code\n"}
+[1.650903] (velodyne_laserscan) StdoutLine: {'line': b'-- Configured cppcheck include dirs: $<BUILD_INTERFACE:/home/aatmaj/Sookshma-Jetson/ros2_ws/src/velodyne/velodyne_laserscan/include>\n'}
+[1.651097] (velodyne_laserscan) StdoutLine: {'line': b'-- Configured cppcheck exclude dirs and/or files: \n'}
+[1.653099] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'cpplint' to check C / C++ code against the Google style\n"}
+[1.653429] (velodyne_laserscan) StdoutLine: {'line': b'-- Configured cpplint exclude dirs and/or files: \n'}
+[1.653846] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'flake8' to check Python code syntax and style conventions\n"}
+[1.654819] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[1.655671] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257\n"}
+[1.658027] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'uncrustify' to check C / C++ code style\n"}
+[1.658219] (velodyne_laserscan) StdoutLine: {'line': b'-- Configured uncrustify additional arguments: \n'}
+[1.659269] (velodyne_laserscan) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[1.666057] (velodyne_laserscan) StdoutLine: {'line': b'-- Configuring done\n'}
+[1.688808] (velodyne_laserscan) StdoutLine: {'line': b'-- Generating done\n'}
+[1.695426] (velodyne_laserscan) StdoutLine: {'line': b'-- Build files have been written to: /home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan\n'}
+[1.700878] (-) TimerEvent: {}
+[1.710301] (interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.711959] (velodyne_laserscan) JobEnded: {'identifier': 'velodyne_laserscan', 'rc': 'SIGINT'}
+[1.742629] (velodyne_msgs) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.801012] (-) TimerEvent: {}
+[1.901509] (-) TimerEvent: {}
+[1.946227] (interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[1.978764] (interfaces) StdoutLine: {'line': b'-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") \n'}
+[1.983379] (interfaces) StdoutLine: {'line': b'-- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)\n'}
+[2.000744] (velodyne_msgs) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[2.001592] (-) TimerEvent: {}
+[2.032648] (interfaces) StdoutLine: {'line': b'-- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") \n'}
+[2.033013] (interfaces) StdoutLine: {'line': b'-- Using PYTHON_EXECUTABLE: /usr/bin/python3\n'}
+[2.033203] (interfaces) StdoutLine: {'line': b'-- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10\n'}
+[2.033392] (interfaces) StdoutLine: {'line': b'-- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so\n'}
+[2.041551] (velodyne_msgs) StdoutLine: {'line': b'-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") \n'}
+[2.045409] (velodyne_msgs) StdoutLine: {'line': b'-- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)\n'}
+[2.061316] (interfaces) StdoutLine: {'line': b'-- Found PythonExtra: .so  \n'}
+[2.082844] (velodyne_msgs) StdoutLine: {'line': b'-- Found PythonLibs: /usr/lib/x86_64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") \n'}
+[2.083185] (velodyne_msgs) StdoutLine: {'line': b'-- Using PYTHON_EXECUTABLE: /usr/bin/python3\n'}
+[2.083420] (velodyne_msgs) StdoutLine: {'line': b'-- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10\n'}
+[2.083611] (velodyne_msgs) StdoutLine: {'line': b'-- Using PYTHON_LIBRARIES: /usr/lib/x86_64-linux-gnu/libpython3.10.so\n'}
+[2.101766] (-) TimerEvent: {}
+[2.110506] (velodyne_msgs) StdoutLine: {'line': b'-- Found PythonExtra: .so  \n'}
+[2.168284] (interfaces) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.12.14 (/opt/ros/humble/share/ament_lint_auto/cmake)\n'}
+[2.197175] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake_flake8: 0.12.14 (/opt/ros/humble/share/ament_cmake_flake8/cmake)\n'}
+[2.199145] (interfaces) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[2.200575] (interfaces) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[2.200879] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_cmake_pep257: 0.12.14 (/opt/ros/humble/share/ament_cmake_pep257/cmake)\n'}
+[2.201852] (-) TimerEvent: {}
+[2.205405] (velodyne_msgs) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.12.14 (/opt/ros/humble/share/ament_lint_auto/cmake)\n'}
+[2.205713] (interfaces) StdoutLine: {'line': b'-- Configuring done\n'}
+[2.227275] (velodyne_msgs) StdoutLine: {'line': b"-- Added test 'copyright' to check source files copyright and LICENSE\n"}
+[2.227779] (velodyne_msgs) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[2.228302] (velodyne_msgs) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[2.233002] (velodyne_msgs) StdoutLine: {'line': b'-- Configuring done\n'}
+[2.249829] (interfaces) StdoutLine: {'line': b'-- Generating done\n'}
+[2.263794] (interfaces) StdoutLine: {'line': b'-- Build files have been written to: /home/aatmaj/Sookshma-Jetson/ros2_ws/build/interfaces\n'}
+[2.274441] (interfaces) JobEnded: {'identifier': 'interfaces', 'rc': 'SIGINT'}
+[2.278521] (velodyne_msgs) StdoutLine: {'line': b'-- Generating done\n'}
+[2.292594] (velodyne_msgs) StdoutLine: {'line': b'-- Build files have been written to: /home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_msgs\n'}
+[2.302035] (-) TimerEvent: {}
+[2.306372] (velodyne_msgs) JobEnded: {'identifier': 'velodyne_msgs', 'rc': 'SIGINT'}
+[2.317458] (velodyne_driver) JobSkipped: {'identifier': 'velodyne_driver'}
+[2.317581] (velodyne_pointcloud) JobSkipped: {'identifier': 'velodyne_pointcloud'}
+[2.317616] (zed_wrapper) JobSkipped: {'identifier': 'zed_wrapper'}
+[2.317651] (velodyne) JobSkipped: {'identifier': 'velodyne'}
+[2.317675] (zed_ros2) JobSkipped: {'identifier': 'zed_ros2'}
+[2.317707] (-) EventReactorShutdown: {}

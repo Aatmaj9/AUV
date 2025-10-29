@@ -1,0 +1,32 @@
+[0.018s] Invoking command in '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/zed_components': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/aatmaj/Sookshma-Jetson/ros2_ws/src/zed-ros2-wrapper/zed_components -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/zed_components
+[0.085s] -- The C compiler identification is GNU 11.4.0
+[0.154s] -- The CXX compiler identification is GNU 11.4.0
+[0.163s] -- Detecting C compiler ABI info
+[0.250s] -- Detecting C compiler ABI info - done
+[0.260s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.261s] -- Detecting C compile features
+[0.261s] -- Detecting C compile features - done
+[0.265s] -- Detecting CXX compiler ABI info
+[0.363s] -- Detecting CXX compiler ABI info - done
+[0.373s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.373s] -- Detecting CXX compile features
+[0.374s] -- Detecting CXX compile features - done
+[0.392s] [31mCMake Error at CMakeLists.txt:84 (find_package):
+[0.392s]   By not providing "FindZED.cmake" in CMAKE_MODULE_PATH this project has
+[0.392s]   asked CMake to find a package configuration file provided by "ZED", but
+[0.392s]   CMake did not find one.
+[0.392s] 
+[0.392s]   Could not find a package configuration file provided by "ZED" with any of
+[0.392s]   the following names:
+[0.392s] 
+[0.392s]     ZEDConfig.cmake
+[0.392s]     zed-config.cmake
+[0.392s] 
+[0.392s]   Add the installation prefix of "ZED" to CMAKE_PREFIX_PATH or set "ZED_DIR"
+[0.392s]   to a directory containing one of the above files.  If "ZED" provides a
+[0.393s]   separate development package or SDK, be sure it has been installed.
+[0.393s] 
+[0.393s] [0m
+[0.393s] -- Configuring incomplete, errors occurred!
+[0.393s] See also "/home/aatmaj/Sookshma-Jetson/ros2_ws/build/zed_components/CMakeFiles/CMakeOutput.log".
+[0.397s] Invoked command in '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/zed_components' returned '1': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/aatmaj/Sookshma-Jetson/ros2_ws/src/zed-ros2-wrapper/zed_components -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/aatmaj/Sookshma-Jetson/ros2_ws/install/zed_components

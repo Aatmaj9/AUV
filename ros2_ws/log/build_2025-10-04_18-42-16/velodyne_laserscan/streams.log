@@ -1,0 +1,7 @@
+[0.017s] Invoking command in '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan -- -j24 -l24
+[0.080s] [ 25%] [32mBuilding CXX object CMakeFiles/velodyne_laserscan.dir/src/velodyne_laserscan.cpp.o[0m
+[9.104s] [ 50%] [32m[1mLinking CXX shared library libvelodyne_laserscan.so[0m
+[9.586s] [ 50%] Built target velodyne_laserscan
+[9.616s] [ 75%] [32mBuilding CXX object CMakeFiles/velodyne_laserscan_node.dir/src/node.cpp.o[0m
+[12.466s] [100%] [32m[1mLinking CXX executable velodyne_laserscan_node[0m
+[12.715s] [100%] Built target velodyne_laserscan_node

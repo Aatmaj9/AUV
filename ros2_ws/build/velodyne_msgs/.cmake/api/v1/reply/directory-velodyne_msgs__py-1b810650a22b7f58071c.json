@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "velodyne_msgs__py",
+		"source" : "/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_msgs/velodyne_msgs__py"
+	}
+}

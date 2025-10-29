@@ -1,0 +1,25 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from interfaces/msg/Actuator.msg
+// generated code does not contain a copyright notice
+
+#include "std_msgs/msg/Header.idl"
+
+module interfaces {
+  module msg {
+    struct Actuator {
+      std_msgs::msg::Header header;
+
+      @verbatim (language="comment", text=
+        "Array of actuator values (rudder, propeller, etc.)")
+      sequence<double> actuator_values;
+
+      @verbatim (language="comment", text=
+        "Array of actuator names for identification")
+      sequence<string> actuator_names;
+
+      @verbatim (language="comment", text=
+        "Covariance matrix in row-major order")
+      sequence<double> covariance;
+    };
+  };
+};

@@ -1,0 +1,1 @@
+Invoking command in '/home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /home/aatmaj/Sookshma-Jetson/ros2_ws/build/velodyne_laserscan -- -j24 -l24
