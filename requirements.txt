@@ -1,6 +1,5 @@
 numpy
 scipy
-opencv
 pynput
 websockets
 websocket-client

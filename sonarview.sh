@@ -1,0 +1,1 @@
+sudo docker run -d -v /usr/SonarView:/userdata --net=host --name=sonarview --restart=unless-stopped nicknothom/sonarview:1.14.4

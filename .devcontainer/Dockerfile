@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
 RUN apt-get update && apt-get install -y software-properties-common \
  && apt-add-repository -y universe && apt-get update \
  && apt-get install -y --no-install-recommends \
-      python3-pip python3-serial python3-venv \
+      python3-pip python3-serial python3-venv python3-opencv \
       sudo xauth htop udev zip unzip curl \
       libboost-all-dev libasio-dev \
       build-essential gcc gfortran git \
@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-rosbridge-server \
       ros-humble-rosx-introspection \
       ros-humble-foxglove-bridge \
+      ros-humble-image-transport \
       ros-humble-image-transport-plugins \
       ros-humble-compressed-image-transport \
       ros-humble-compressed-depth-image-transport \
@@ -44,25 +45,22 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-zlib-point-cloud-transport \
       ros-humble-zstd-point-cloud-transport \
       ros-humble-xacro \
+      ros-humble-vision-opencv \
       ros-humble-ffmpeg-image-transport \
       ros-humble-ffmpeg-encoder-decoder \
       ros-humble-zed-msgs \
       ros-humble-geographic-msgs \
-      ros-humble-image-transport \
       ros-humble-point-cloud-transport \
       ros-humble-pcl-conversions \
       ros-humble-robot-localization \
       ros-humble-backward-ros \
-      ros-humble-velodyne \
-      ros-humble-velodyne-driver \
-      ros-humble-velodyne-pointcloud \
       ros-humble-tf2-ros \
       ros-humble-tf2-geometry-msgs \
       ros-humble-message-filters \
       ros-humble-camera-info-manager \
       ros-humble-pointcloud-to-laserscan \
-      ros-humble-laser-filters \\
-      gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi bossa-cli \\
+      ros-humble-laser-filters \
+      gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi bossa-cli \
  && ln -sf /usr/bin/python3 /usr/bin/python \
  && chmod -R a+rX /usr/local/lib/python3.10/dist-packages /usr/lib/python3/dist-packages \
  && rm -rf /var/lib/apt/lists/*
@@ -134,10 +132,7 @@ RUN echo 'source /opt/ros/humble/setup.bash' >> /home/${USERNAME}/.bashrc \
 
 RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py'" >> /home/${USERNAME}/.bashrc \
  && echo "alias gnc='sros2 && ros2 run gnc gnc'" >> /home/${USERNAME}/.bashrc \
- && echo "alias uwb='sros2 && ros2 run uwb_driver uwb'" >> /home/${USERNAME}/.bashrc \
  && echo "alias mavsim='sros2 && ros2 run mav_simulator simulate'" >> /home/${USERNAME}/.bashrc \
- && echo "alias ardusimple='sros2 && ros2 launch ublox_gps ublox_gps_node-launch.py'" >> /home/${USERNAME}/.bashrc \
- && echo "alias zed='sros2 && ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zed2i'" >> /home/${USERNAME}/.bashrc \
- && echo "alias velodyne='sros2 && ros2 launch velodyne velodyne-all-nodes-VLP16-launch.py'" >> /home/${USERNAME}/.bashrc
+ && echo "alias zed='sros2 && ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zed2i'" >> /home/${USERNAME}/.bashrc 
 
 EXPOSE 9000 9001 9002 9003
