@@ -1,0 +1,10 @@
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+*.bag
+*.bin
+*.pcap
+*.mp4
+*.zip
+*.AppImage
+
