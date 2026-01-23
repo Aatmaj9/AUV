@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
-set -m  
-trap "kill 0" SIGTERM SIGINT
+source udev.sh
+
+docker exec -d auv_dev bash -ic '
+source ~/.bashrc
 
 dvl &
-ping360 &
-ping2 &
-sbg &
-zed &
 
-wait
+ping360 &
+sleep 4
+
+ping2 &
+sleep 4
+
+sbg &
+sleep 2
+
+zed &
+'
+
+echo "Sensors started"
+docker exec -it auv_dev bash
