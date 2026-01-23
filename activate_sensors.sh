@@ -1,5 +1,5 @@
 source udev.sh
-docker exec -d auv_dev bash -ic 'shopt -s expand_aliases; source ~/.bashrc; dvl & ping360 & sleep 4; ping2 & sleep 4; sbg & sleep 2; zed &'
-
+#Please note the order of sensors - ping360 then ping2 then sbg then zed
+docker exec -d auv_dev bash -ic 'source ~/.bashrc; dvl & ping360 & ping2 & sbg & zed &'
 echo "Sensors started"
 docker exec -it auv_dev bash
