@@ -42,4 +42,12 @@ sudo nmcli dev wifi connect "mavlab" password "mavlab24" ifname wlan1
 iwconfig wlP1p1s0
 iwconfig wlx8c902d14c25e
 ```
+----------------------------------------------- Setting static ip to ethernet switch -----------------------------------------
 
+# Set static ip for the ethernet switch on enP8p1s0 (stays even after reboot)
+```
+sudo nmcli con add type ethernet con-name eth_switch ifname enP8p1s0 ip4 192.168.194.10/24
+sudo nmcli con mod eth_switch connection.autoconnect yes
+sudo nmcli con up eth_switch
+
+```

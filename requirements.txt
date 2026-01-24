@@ -13,3 +13,4 @@ torchvision
 torchaudio
 ultralytics
 bluerobotics-ping
+wlmodem
