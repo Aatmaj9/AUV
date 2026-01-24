@@ -11,5 +11,7 @@ sleep 4
 # Start rest
 docker exec -d auv_dev bash -ic 'source ~/.bashrc; sbg & zed &'
 
+sleep 8
+
 echo "🟢 All sensors activated!"
 
