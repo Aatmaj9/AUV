@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
 docker exec auv_dev bash -c '
-pgrep -f "ros2 run ping360_sonar" | xargs -r kill -9
-pgrep -f "ros2 run ping_sonar_ros" | xargs -r kill -9
-pgrep -f "ros2 launch sbg_driver" | xargs -r kill -9
-pgrep -f "ros2 launch zed_wrapper" | xargs -r kill -9
-pgrep -f "ros2 launch dvl_a50" | xargs -r kill -9
+pkill -9 -f sbg_device
+pkill -9 -f ping360
+pkill -9 -f ping_sonar_ros
+pkill -9 -f dvl
+pkill -9 -f zed
+pkill -9 -f zed_wrapper
+pkill -9 -f zed_node
 '
 
-echo "Sensors stopped"
+echo "🔴 All sensors deactivated"
