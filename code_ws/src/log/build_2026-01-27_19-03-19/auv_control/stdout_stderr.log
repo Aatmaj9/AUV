@@ -1,0 +1,31 @@
+running egg_info
+creating ../build/auv_control/auv_control.egg-info
+writing ../build/auv_control/auv_control.egg-info/PKG-INFO
+writing dependency_links to ../build/auv_control/auv_control.egg-info/dependency_links.txt
+writing entry points to ../build/auv_control/auv_control.egg-info/entry_points.txt
+writing requirements to ../build/auv_control/auv_control.egg-info/requires.txt
+writing top-level names to ../build/auv_control/auv_control.egg-info/top_level.txt
+writing manifest file '../build/auv_control/auv_control.egg-info/SOURCES.txt'
+reading manifest file '../build/auv_control/auv_control.egg-info/SOURCES.txt'
+writing manifest file '../build/auv_control/auv_control.egg-info/SOURCES.txt'
+running build
+running build_py
+creating /home/aatmaj/AUV/code_ws/src/build/auv_control/build
+creating /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib
+creating /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib/auv_control
+copying auv_control/__init__.py -> /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib/auv_control
+running install
+running install_lib
+creating /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control
+copying /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib/auv_control/__init__.py -> /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control
+byte-compiling /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control/__init__.py to __init__.cpython-310.pyc
+running install_data
+creating /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index
+creating /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index/resource_index
+creating /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index/resource_index/packages
+copying resource/auv_control -> /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index/resource_index/packages
+copying package.xml -> /home/aatmaj/AUV/code_ws/src/install/auv_control/share/auv_control
+running install_egg_info
+Copying ../build/auv_control/auv_control.egg-info to /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control-0.0.0-py3.10.egg-info
+running install_scripts
+writing list of installed files to '/home/aatmaj/AUV/code_ws/src/build/auv_control/install.log'

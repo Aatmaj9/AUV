@@ -1,0 +1,33 @@
+[0.774s] Invoking command in '/home/aatmaj/AUV/code_ws/src/auv_control': PYTHONPATH=/home/aatmaj/AUV/code_ws/src/build/auv_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/auv_control build --build-base /home/aatmaj/AUV/code_ws/src/build/auv_control/build install --record /home/aatmaj/AUV/code_ws/src/build/auv_control/install.log --single-version-externally-managed install_data
+[1.071s] running egg_info
+[1.072s] creating ../build/auv_control/auv_control.egg-info
+[1.072s] writing ../build/auv_control/auv_control.egg-info/PKG-INFO
+[1.072s] writing dependency_links to ../build/auv_control/auv_control.egg-info/dependency_links.txt
+[1.072s] writing entry points to ../build/auv_control/auv_control.egg-info/entry_points.txt
+[1.073s] writing requirements to ../build/auv_control/auv_control.egg-info/requires.txt
+[1.073s] writing top-level names to ../build/auv_control/auv_control.egg-info/top_level.txt
+[1.073s] writing manifest file '../build/auv_control/auv_control.egg-info/SOURCES.txt'
+[1.074s] reading manifest file '../build/auv_control/auv_control.egg-info/SOURCES.txt'
+[1.075s] writing manifest file '../build/auv_control/auv_control.egg-info/SOURCES.txt'
+[1.075s] running build
+[1.075s] running build_py
+[1.075s] creating /home/aatmaj/AUV/code_ws/src/build/auv_control/build
+[1.076s] creating /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib
+[1.076s] creating /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib/auv_control
+[1.076s] copying auv_control/__init__.py -> /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib/auv_control
+[1.076s] running install
+[1.076s] running install_lib
+[1.077s] creating /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control
+[1.077s] copying /home/aatmaj/AUV/code_ws/src/build/auv_control/build/lib/auv_control/__init__.py -> /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control
+[1.077s] byte-compiling /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control/__init__.py to __init__.cpython-310.pyc
+[1.077s] running install_data
+[1.077s] creating /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index
+[1.078s] creating /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index/resource_index
+[1.078s] creating /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index/resource_index/packages
+[1.078s] copying resource/auv_control -> /home/aatmaj/AUV/code_ws/src/install/auv_control/share/ament_index/resource_index/packages
+[1.078s] copying package.xml -> /home/aatmaj/AUV/code_ws/src/install/auv_control/share/auv_control
+[1.078s] running install_egg_info
+[1.079s] Copying ../build/auv_control/auv_control.egg-info to /home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages/auv_control-0.0.0-py3.10.egg-info
+[1.080s] running install_scripts
+[1.101s] writing list of installed files to '/home/aatmaj/AUV/code_ws/src/build/auv_control/install.log'
+[1.128s] Invoked command in '/home/aatmaj/AUV/code_ws/src/auv_control' returned '0': PYTHONPATH=/home/aatmaj/AUV/code_ws/src/build/auv_control/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/aatmaj/AUV/code_ws/src/install/auv_control/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../build/auv_control build --build-base /home/aatmaj/AUV/code_ws/src/build/auv_control/build install --record /home/aatmaj/AUV/code_ws/src/build/auv_control/install.log --single-version-externally-managed install_data
