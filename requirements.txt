@@ -8,9 +8,6 @@ packaging>=24.0
 setuptools>=70
 wheel>=0.41
 scikit-learn
-torch
-torchvision
-torchaudio
 ultralytics
 bluerobotics-ping
 wlmodem

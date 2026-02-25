@@ -1,11 +1,16 @@
-# Exit immediately on error
+#!/bin/bash
 set -e
 
 # Path to the sketch
-SKETCH_PATH="./arduino/sookshma_masv01"
+SKETCH_PATH="./arduino/sauvc"
 
-if [ "$(uname -m)" = "x86_64" ]; then
-    arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:sam:arduino_due_x_dbg "$SKETCH_PATH"
-else
-    arduino-cli upload -p /dev/ttyACM0 --fqbn per1234:sam:arduino_due_x_dbg "$SKETCH_PATH"
-fi
+# Serial port (change if needed)
+PORT="/dev/arduino"
+
+# Upload to ESP32 via USB
+arduino-cli upload \
+  -p "$PORT" \
+  --fqbn esp32:esp32:esp32 \
+  "$SKETCH_PATH"
+
+echo "🚀 ESP32 Upload successful."
