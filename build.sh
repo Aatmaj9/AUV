@@ -1,7 +1,8 @@
 docker buildx build \
   --platform linux/arm64 \
   --pull \
-  -f .devcontainer/Dockerfile_esp32 \
-  -t aatmaj9/auv_esp32:1.0 \
+  --no-cache \
+  -f .devcontainer/Dockerfile_portenta_zedless \
+  -t aatmaj9/auv_portenta_zedless:1.0 \
   --push \
   .

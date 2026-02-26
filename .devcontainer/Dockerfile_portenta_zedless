@@ -88,9 +88,8 @@ COPY --chown=${USERNAME}:${USERNAME} requirements.txt /home/${USERNAME}/requirem
 
 RUN python3 -m pip install --upgrade pip setuptools wheel
 
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --force-reinstall \
 --index-url https://pypi.jetson-ai-lab.io/jp6/cu126 \
---extra-index-url https://pypi.org/simple \
 torch torchvision torchaudio
 
 RUN pip install --no-cache-dir -r requirements.txt
