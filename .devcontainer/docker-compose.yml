@@ -1,6 +1,6 @@
 services:
   sookshma:
-    image: aatmaj9/sauvc:1.0
+    image: aatmaj9/auv_portenta:1.0
     restart: unless-stopped
     build:
       context: .

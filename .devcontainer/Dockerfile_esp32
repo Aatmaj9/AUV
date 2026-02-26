@@ -89,13 +89,14 @@ COPY --chown=${USERNAME}:${USERNAME} requirements.txt /home/${USERNAME}/requirem
 # Upgrade pip tools
 RUN python3 -m pip install --upgrade pip setuptools wheel
 
-# Install CUDA-enabled PyTorch stack for JetPack 6.2
-RUN pip install --no-cache-dir --extra-index-url \
-https://developer.download.nvidia.com/compute/redist/jp/v62 \
+# Install CUDA-enabled PyTorch for JetPack 6 / CUDA 12.6
+RUN pip install --no-cache-dir \
+--index-url https://pypi.jetson-ai-lab.io/jp6/cu126 \
+--extra-index-url https://pypi.org/simple \
 torch torchvision torchaudio
 
 # Install remaining Python dependencies
-RUN pip install --no-cache-dir -r /home/${USERNAME}/requirements.txt
+RUN pip install --no-cache-dir --no-deps -r /home/${USERNAME}/requirements.txt
 
 RUN echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
 

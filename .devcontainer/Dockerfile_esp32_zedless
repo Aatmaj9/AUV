@@ -1,5 +1,8 @@
-# Base: ZED SDK 5.0 for JetPack 6.2.1 (L4T r36.4)
-FROM stereolabs/zed:5.0-tools-devel-l4t-r36.4
+# ==================== Base: JetPack 6.2.1 (L4T r36.4) ====================
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
 
 # -------------------- ROS 2 Humble + Base Deps --------------------
 RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
@@ -9,7 +12,7 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
     http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
     > /etc/apt/sources.list.d/ros2.list \
  && apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends \
       ros-humble-ros-base \
       python3-rosdep \
       python3-vcstool \
@@ -19,7 +22,7 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
  && rosdep update \
  && rm -rf /var/lib/apt/lists/*
 
-# -------------------- Additional Apt Packages --------------------
+ # -------------------- Additional Apt Packages --------------------
 RUN apt-get update && apt-get install -y software-properties-common \
  && apt-add-repository -y universe && apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -71,7 +74,7 @@ ENV USERNAME=${USERNAME}
 RUN useradd -m "${USERNAME}" \
  && echo "${USERNAME}:${USERNAME}" | chpasswd \
  && usermod --shell /bin/bash "${USERNAME}" \
- && usermod -aG sudo,dialout,video,plugdev,zed "${USERNAME}" \
+ && usermod -aG sudo,dialout,video,plugdev "${USERNAME}" \
  && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
  && chmod 0440 /etc/sudoers.d/${USERNAME}
 
@@ -96,7 +99,7 @@ RUN pip install --no-cache-dir \
 torch torchvision torchaudio
 
 # Install remaining Python dependencies
-RUN pip install --no-cache-dir -r /home/${USERNAME}/requirements.txt
+RUN pip install --no-cache-dir --no-deps -r /home/${USERNAME}/requirements.txt
 
 RUN echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
 
@@ -104,16 +107,16 @@ RUN echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
 ENV PATH="/home/${USERNAME}/bin:${PATH}"
 ENV ARDUINO_DATA="/home/${USERNAME}/.arduino15"
+
 RUN arduino-cli config init \
  && arduino-cli config set directories.data "${ARDUINO_DATA}" \
+ && arduino-cli config set board_manager.additional_urls \
+    https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json \
  && arduino-cli core update-index \
- && arduino-cli cache clean
-
-RUN arduino-cli core update-index \
- && arduino-cli cache clean \
- && arduino-cli core install arduino:mbed_portenta \
+ && arduino-cli core install esp32:esp32 \
  && arduino-cli lib install Servo \
- && git clone --depth=1 https://gitlab.com/timwilkinson/FlySkyIBus.git /home/${USERNAME}/Arduino/libraries/FlySkyIBus
+ && git clone --depth=1 https://gitlab.com/timwilkinson/FlySkyIBus.git /home/${USERNAME}/Arduino/libraries/FlySkyIBus \
+ && arduino-cli cache clean
 
 # -------------------- MicroROS setup --------------------
 
