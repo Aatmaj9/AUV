@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-camera-info-manager \
       ros-humble-pointcloud-to-laserscan \
       ros-humble-laser-filters \
-      gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi bossa-cli \
+      ros-humble-v4l2-camera \
  && ln -sf /usr/bin/python3 /usr/bin/python \
  && chmod -R a+rX /usr/local/lib/python3.10/dist-packages /usr/lib/python3/dist-packages \
  && rm -rf /var/lib/apt/lists/*
@@ -78,65 +78,91 @@ RUN useradd -m "${USERNAME}" \
 # -------------------- Python venv + pip packages --------------------
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
-RUN python3 -m venv --system-site-packages /home/${USERNAME}/.venv
+
+RUN python3 -m venv /home/${USERNAME}/.venv
+
 ENV VIRTUAL_ENV=/home/${USERNAME}/.venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 COPY --chown=${USERNAME}:${USERNAME} requirements.txt /home/${USERNAME}/requirements.txt
-RUN python3 -m pip install --upgrade pip setuptools wheel \
- && python3 -m pip install --no-cache-dir -r /home/${USERNAME}/requirements.txt
+
+# Upgrade pip tools
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# Install CUDA-enabled PyTorch for JetPack 6 / CUDA 12.6
+RUN pip install --no-cache-dir \
+--index-url https://pypi.jetson-ai-lab.io/jp6/cu126 \
+torch torchvision torchaudio
+
+# Install remaining Python dependencies
+RUN pip install --no-cache-dir --no-deps -r /home/${USERNAME}/requirements.txt
+
 RUN echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
 
-# -------------------- Arduino CLI + micro-ROS setup --------------------
+# -------------------- Arduino CLI setup --------------------
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
 ENV PATH="/home/${USERNAME}/bin:${PATH}"
 ENV ARDUINO_DATA="/home/${USERNAME}/.arduino15"
+
 RUN arduino-cli config init \
  && arduino-cli config set directories.data "${ARDUINO_DATA}" \
+ && arduino-cli config set board_manager.additional_urls \
+    https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json \
  && arduino-cli core update-index \
+ && arduino-cli core install arduino:mbed_portenta \
+ && arduino-cli core install esp32:esp32 \
+ && arduino-cli lib install Servo \
+ && git clone --depth=1 https://gitlab.com/timwilkinson/FlySkyIBus.git /home/${USERNAME}/Arduino/libraries/FlySkyIBus \
  && arduino-cli cache clean
 
-RUN arduino-cli core update-index \
- && arduino-cli cache clean \
- && arduino-cli core update-index --additional-urls https://per1234.github.io/ArduinoCore-sam/package_per1234_samarm64_index.json \
- && export ARDUINO_BOARD_MANAGER_ADDITIONAL_URLS=https://per1234.github.io/ArduinoCore-sam/package_per1234_samarm64_index.json \
- && arduino-cli core install per1234:sam \
- && SAM_ARM_PATH="/home/${USERNAME}/.arduino15/packages/per1234/hardware/sam/1.6.11-arm64" \
- && curl -fsSL https://raw.githubusercontent.com/micro-ROS/micro_ros_arduino/main/extras/patching_boards/platform_arduinocore_sam.txt -o ${SAM_ARM_PATH}/platform.txt \
- && sed -i 's/-4.8.3-2014q1././g' ${SAM_ARM_PATH}/platform.txt \
- && arduino-cli lib install Servo \
- && git clone --depth=1 https://gitlab.com/timwilkinson/FlySkyIBus.git /home/${USERNAME}/Arduino/libraries/FlySkyIBus
+# -------------------- MicroROS setup --------------------
 
 COPY --chown=${USERNAME}:${USERNAME} micro_ros_arduino_arm.zip /tmp/micro_ros_arduino.zip
 RUN printf "board_manager:\n  additional_urls: []\n\nlibrary:\n  enable_unsafe_install: true\n" > /home/${USERNAME}/.arduino15/arduino-cli.yaml \
  && arduino-cli --config-file /home/${USERNAME}/.arduino15/arduino-cli.yaml lib install --zip-path /tmp/micro_ros_arduino.zip \
  && rm /tmp/micro_ros_arduino.zip
 
-# -------------------- Node.js via NVM + localtunnel --------------------
-ENV NVM_DIR="/home/${USERNAME}/.nvm"
-ENV NODE_VERSION="20.17.0"
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash \
- && . "$NVM_DIR/nvm.sh" \
- && nvm install $NODE_VERSION \
- && nvm alias default $NODE_VERSION \
- && nvm use default \
- && npm install -g npm@latest localtunnel
-ENV PATH="${NVM_DIR}/versions/node/v${NODE_VERSION}/bin:${PATH}"
+# -------------------- Sensor ROS Packages to home/mavlab/ros2_ws --------------------
+
+COPY --chown=${USERNAME}:${USERNAME} packages /home/${USERNAME}/ros2_ws/src
+WORKDIR /home/${USERNAME}/ros2_ws
+
+USER root
+WORKDIR /home/mavlab/ros2_ws
+RUN apt-get update && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -r -y
+USER ${USERNAME}
+
+# -------------------- Install ping-python/brping --------------------
+USER root
+WORKDIR /home/${USERNAME}/ros2_ws/src/ping_sonar_ros/ping_sonar_ros/ping-python
+RUN /usr/bin/python3 setup.py install
+USER ${USERNAME}
+
+# -------------------- Build the sensor ROS Packages once and available directly inside container --------------------
+USER root
+WORKDIR /home/${USERNAME}/ros2_ws
+RUN bash -c "source /opt/ros/humble/setup.bash && \
+             colcon build --symlink-install --cmake-args=-DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)"
 
 # -------------------- ROS 2 bashrc + aliases --------------------
 RUN echo 'source /opt/ros/humble/setup.bash' >> /home/${USERNAME}/.bashrc \
- && echo 'if [ -f /workspaces/mavlab/ros2_ws/install/setup.bash ]; then source /workspaces/mavlab/ros2_ws/install/setup.bash; fi' >> /home/${USERNAME}/.bashrc \
- && echo "alias sros2='source /opt/ros/humble/setup.bash && if [ -f /workspaces/mavlab/ros2_ws/install/setup.bash ]; then source /workspaces/mavlab/ros2_ws/install/setup.bash; fi'" >> /home/${USERNAME}/.bashrc \
- && echo "alias colb='pushd ~/ros2_ws >/dev/null && sudo rm -rf build log install && colcon build --symlink-install --cmake-args=-DCMAKE_BUILD_TYPE=Release --parallel-workers \$(nproc) && sros2 && popd >/dev/null'" >> /home/${USERNAME}/.bashrc \
+ && echo 'if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi' >> /home/${USERNAME}/.bashrc \
+ && echo 'if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi' >> /home/${USERNAME}/.bashrc \
+ && echo "alias sros2='source /opt/ros/humble/setup.bash && source /home/mavlab/ros2_ws/install/setup.bash'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias scode='source /opt/ros/humble/setup.bash && source /workspaces/mavlab/code_ws/install/setup.bash'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias colb='pushd /workspaces/mavlab/code_ws >/dev/null && sudo rm -rf build log install && colcon build --symlink-install --cmake-args=-DCMAKE_BUILD_TYPE=Release --parallel-workers \$(nproc) && sros2 && popd >/dev/null'" >> /home/${USERNAME}/.bashrc \
  && echo "alias topics='ros2 topic list'" >> /home/${USERNAME}/.bashrc \
  && echo "alias nodes='ros2 node list'" >> /home/${USERNAME}/.bashrc
 
-RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py uart_device:=/dev/sbg'" >> /home/${USERNAME}/.bashrc \
+RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py'" >> /home/${USERNAME}/.bashrc \
  && echo "alias gnc='sros2 && ros2 run gnc gnc'" >> /home/${USERNAME}/.bashrc \
  && echo "alias mavsim='sros2 && ros2 run mav_simulator simulate'" >> /home/${USERNAME}/.bashrc \
  && echo "alias zed='sros2 && ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zed2i '" >> /home/${USERNAME}/.bashrc \
- && echo "alias dvl='sros2 && ros2 launch dvl_a50 dvl_a50.launch.py ip_address:='192.168.194.95'" >> /home/${USERNAME}/.bashrc \
- && echo "alias ping360='sros2 && ros2 run ping360_sonar ping360.py --ros-args -p port:=/dev/ping360'" >> /home/${USERNAME}/.bashrc \
- && echo "alias ping2='sros2 && ros2 run ping_sonar_ros ping1d_node --ros-args -p port:=/dev/ping2'" >> /home/${USERNAME}/.bashrc
-
+ && echo "alias dvl='sros2 && ros2 launch dvl_a50 dvl_a50.launch.py ip_address:='192.168.194.95''" >> /home/${USERNAME}/.bashrc \
+ && echo "alias ping360='sros2 && ros2 run ping360_sonar ping360.py --ros-args -p device:=/dev/ping360'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias ping2='sros2 && ros2 run ping_sonar_ros ping1d_node --ros-args -p port:=/dev/ping2'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias webcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -p video_device:=/dev/video0'" >> /home/${USERNAME}/.bashrc
 # -------------------- Expose Ports --------------------
 EXPOSE 9000 9001 9002 9003

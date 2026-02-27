@@ -1,12 +1,7 @@
-numpy
-scipy
 pynput
 websockets
 websocket-client
 flask
-packaging>=24.0
-setuptools>=70
-wheel>=0.41
 scikit-learn
 ultralytics
 bluerobotics-ping
