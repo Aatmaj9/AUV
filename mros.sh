@@ -1,7 +1,7 @@
-docker run -d --privileged --rm \
+docker run -it --privileged --rm \
   --name microros_agent \
   --net=host \
   --volume="/dev":"/dev" \
-  --device=/dev/arduino \
+  --device=/dev/portenta \
   microros/micro-ros-agent:humble \
-  serial --dev /dev/arduino -b 115200
+  serial --dev /dev/portenta -b 115200
