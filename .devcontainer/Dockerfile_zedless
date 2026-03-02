@@ -26,39 +26,29 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
 RUN apt-get update && apt-get install -y software-properties-common \
  && apt-add-repository -y universe && apt-get update \
  && apt-get install -y --no-install-recommends \
-      python3-pip python3-serial python3-venv python3-opencv \
-      sudo xauth htop udev zip unzip curl \
+      python3-pip python3-serial python3-venv \
+      sudo xauth htop udev zip unzip \
       libboost-all-dev libasio-dev \
-      build-essential gcc gfortran git \
-      libsm6 libxext6 libxrender1 libfontconfig1 libgl1 libpcl-dev libpcap-dev libopencv-dev libyaml-cpp-dev libeigen3-dev gdebi-core \
+      git \
+      libsm6 libxext6 libxrender1 libfontconfig1 libgl1 libpcap-dev libopencv-dev libyaml-cpp-dev libeigen3-dev \
       ros-humble-diagnostic-updater \
       ros-humble-nmea-msgs \
       ros-humble-rtcm-msgs \
-      ros-humble-rviz2 \
       ros-humble-rosbridge-server \
       ros-humble-rosx-introspection \
       ros-humble-foxglove-bridge \
       ros-humble-image-transport \
       ros-humble-image-transport-plugins \
       ros-humble-compressed-image-transport \
-      ros-humble-compressed-depth-image-transport \
-      ros-humble-theora-image-transport \
-      ros-humble-point-cloud-transport-plugins \
-      ros-humble-draco-point-cloud-transport \
       ros-humble-xacro \
       ros-humble-vision-opencv \
-      ros-humble-ffmpeg-image-transport \
-      ros-humble-ffmpeg-encoder-decoder \
       ros-humble-geographic-msgs \
-      ros-humble-point-cloud-transport \
-      ros-humble-pcl-conversions \
       ros-humble-robot-localization \
       ros-humble-backward-ros \
       ros-humble-tf2-ros \
       ros-humble-tf2-geometry-msgs \
       ros-humble-message-filters \
       ros-humble-camera-info-manager \
-      ros-humble-pointcloud-to-laserscan \
       ros-humble-laser-filters \
       ros-humble-v4l2-camera \
  && ln -sf /usr/bin/python3 /usr/bin/python \
@@ -92,7 +82,7 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 # Install CUDA-enabled PyTorch for JetPack 6 / CUDA 12.6
 RUN pip install --no-cache-dir \
 --index-url https://pypi.jetson-ai-lab.io/jp6/cu126 \
-torch torchvision torchaudio
+torch torchvision
 
 # Install remaining Python dependencies
 RUN pip install --no-cache-dir --no-deps -r /home/${USERNAME}/requirements.txt
@@ -106,11 +96,8 @@ ENV ARDUINO_DATA="/home/${USERNAME}/.arduino15"
 
 RUN arduino-cli config init \
  && arduino-cli config set directories.data "${ARDUINO_DATA}" \
- && arduino-cli config set board_manager.additional_urls \
-    https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json \
  && arduino-cli core update-index \
  && arduino-cli core install arduino:mbed_portenta \
- && arduino-cli core install esp32:esp32 \
  && arduino-cli lib install Servo \
  && git clone --depth=1 https://gitlab.com/timwilkinson/FlySkyIBus.git /home/${USERNAME}/Arduino/libraries/FlySkyIBus \
  && arduino-cli cache clean

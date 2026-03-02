@@ -5,12 +5,12 @@ set -e
 SKETCH_PATH="./arduino/sauvc"
 
 # Serial port (change if needed)
-PORT="/dev/arduino"
+PORT="/dev/portenta"
 
-# Upload to ESP32 via USB
+# Upload to Portenta H7 (M7 core)
 arduino-cli upload \
   -p "$PORT" \
-  --fqbn esp32:esp32:esp32 \
+  --fqbn arduino:mbed_portenta:envie_m7 \
   "$SKETCH_PATH"
 
-echo "🚀 ESP32 Upload successful."
+echo "🚀 Portenta H7 (M7 core) upload successful."
