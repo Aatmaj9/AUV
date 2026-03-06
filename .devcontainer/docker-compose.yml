@@ -20,7 +20,6 @@ services:
       - dialout
       - video
       - plugdev
-      - zed
       - render
       - "104"
     device_cgroup_rules:

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SKETCH_PATH="./arduino/sauvc"
+SKETCH_PATH="./arduino/microros_test_codes/test2"
 PORT="/dev/portenta"
 
 echo "Going to bootloader mode for code upload..."
