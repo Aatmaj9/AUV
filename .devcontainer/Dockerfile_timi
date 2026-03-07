@@ -27,9 +27,9 @@ RUN apt-get update && apt-get install -y software-properties-common \
  && apt-add-repository -y universe && apt-get update \
  && apt-get install -y --no-install-recommends \
       python3-pip python3-serial python3-venv \
-      sudo xauth htop udev zip unzip \
+      sudo xauth htop udev zip unzip git \
       libboost-all-dev libasio-dev \
-      git \
+      v4l-utils \
       libsm6 libxext6 libxrender1 libfontconfig1 libgl1 libpcap-dev libopencv-dev libyaml-cpp-dev libeigen3-dev libopenblas-dev libopenblas-base \
       ros-humble-diagnostic-updater \
       ros-humble-nmea-msgs \

@@ -23,6 +23,7 @@ services:
       - render
       - audio
       - "104"
+      - "44"
     device_cgroup_rules:
       - 'c 166:* rmw'   # ttyACM*
       - 'c 188:* rmw'   # ttyUSB*
