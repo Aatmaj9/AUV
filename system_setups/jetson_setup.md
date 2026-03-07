@@ -34,17 +34,17 @@ sudo reboot
 
 # Now check if both the interfaces appear`
 ```
-iwdev
+iw dev
 ```
 # You should see both interface now - If the Wifi adapter doesnt have a IP address run this:
 ```
-sudo nmcli dev wifi connect "mavlab" password "mavlab24" ifname wlan1
+sudo nmcli dev wifi connect "mavlab" password "mavlab24" ifname wlx8c902d14c273
 ```
 
 # To view signal strength and link quality - Lower the signal strength in dBm the better it is
 ```
 iwconfig wlP1p1s0
-iwconfig wlx8c902d14c25e
+iwconfig wlx8c902d14c273
 ```
 ----------------------------------------------- Setting static ip to ethernet switch -----------------------------------------
 
