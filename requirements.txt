@@ -6,3 +6,8 @@ scikit-learn
 ultralytics
 bluerobotics-ping
 wlmodem
+crcmod
+cobs
+pyserial
+setuptools==58.2.0
+wheel

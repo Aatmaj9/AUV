@@ -78,7 +78,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --chown=${USERNAME}:${USERNAME} requirements.txt /home/${USERNAME}/requirements.txt
 
 # Upgrade pip tools
-RUN python3 -m pip install --upgrade pip setuptools wheel
+RUN python3 -m pip install --upgrade pip
 
 # Install remaining Python dependencies
 RUN pip install --no-cache-dir --no-deps -r /home/${USERNAME}/requirements.txt
@@ -141,6 +141,10 @@ RUN bash -c "source /opt/ros/humble/setup.bash && \
              colcon build --symlink-install --cmake-args=-DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)"
 
 # -------------------- ROS 2 bashrc + aliases --------------------
+
+RUN echo 'export PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages:$PYTHONPATH' >> /home/${USERNAME}/.bashrc \
+ && echo 'export PATH=$VIRTUAL_ENV/bin:$PATH' >> /home/${USERNAME}/.bashrc
+
 RUN echo 'source /opt/ros/humble/setup.bash' >> /home/${USERNAME}/.bashrc \
  && echo 'if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi' >> /home/${USERNAME}/.bashrc \
  && echo 'if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi' >> /home/${USERNAME}/.bashrc \
