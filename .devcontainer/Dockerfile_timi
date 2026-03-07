@@ -1,5 +1,5 @@
 # ==================== Base: JetPack 6.2.1 (L4T r36.4) ====================
-FROM nvcr.io/nvidia/l4t-jetpack:r36.4.7
+FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 SHELL ["/bin/bash", "-c"]
@@ -94,15 +94,22 @@ RUN arduino-cli config init \
  && arduino-cli core update-index \
  && arduino-cli core install arduino:mbed_portenta \
  && arduino-cli lib install Servo \
- && git clone --depth=1 https://gitlab.com/timwilkinson/FlySkyIBus.git /home/${USERNAME}/Arduino/libraries/FlySkyIBus \
  && arduino-cli cache clean
 
-# -------------------- MicroROS setup --------------------
+# -------------------- MicroROS and FlySkyIBus arduino Library setup --------------------
 
-COPY --chown=${USERNAME}:${USERNAME} micro_ros_arduino_arm.zip /tmp/micro_ros_arduino.zip
+COPY --chown=${USERNAME}:${USERNAME} micro_ros_arduino.zip /tmp/micro_ros_arduino.zip
 RUN printf "board_manager:\n  additional_urls: []\n\nlibrary:\n  enable_unsafe_install: true\n" > /home/${USERNAME}/.arduino15/arduino-cli.yaml \
  && arduino-cli --config-file /home/${USERNAME}/.arduino15/arduino-cli.yaml lib install --zip-path /tmp/micro_ros_arduino.zip \
  && rm /tmp/micro_ros_arduino.zip
+
+COPY --chown=${USERNAME}:${USERNAME} FlySkyIBus_modified_portenta.zip /tmp/FlySkyIBus.zip
+RUN arduino-cli --config-file /home/${USERNAME}/.arduino15/arduino-cli.yaml lib install --zip-path /tmp/FlySkyIBus.zip \
+ && rm /tmp/FlySkyIBus.zip
+
+COPY --chown=${USERNAME}:${USERNAME} BlueRobotics_MS5837.zip /tmp/BlueRobotics_MS5837.zip
+RUN arduino-cli --config-file /home/${USERNAME}/.arduino15/arduino-cli.yaml lib install --zip-path /tmp/BlueRobotics_MS5837.zip \
+ && rm /tmp/BlueRobotics_MS5837.zip
 
 # -------------------- Sensor ROS Packages to home/mavlab/ros2_ws --------------------
 
@@ -148,6 +155,8 @@ RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py'" >> /
  && echo "alias dvl='sros2 && ros2 launch dvl_a50 dvl_a50.launch.py ip_address:='192.168.194.95''" >> /home/${USERNAME}/.bashrc \
  && echo "alias ping360='sros2 && ros2 run ping360_sonar ping360.py --ros-args -p device:=/dev/ping360'" >> /home/${USERNAME}/.bashrc \
  && echo "alias ping2='sros2 && ros2 run ping_sonar_ros ping1d_node --ros-args -p port:=/dev/ping2'" >> /home/${USERNAME}/.bashrc \
- && echo "alias webcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -p video_device:=/dev/video0'" >> /home/${USERNAME}/.bashrc
+ && echo "alias frontcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -p video_device:=/dev/frontcam'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias bottomcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -p video_device:=/dev/bottomcam'" >> /home/${USERNAME}/.bashrc
+
 # -------------------- Expose Ports --------------------
 EXPOSE 9000 9001 9002 9003

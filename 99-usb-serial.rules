@@ -1,7 +1,26 @@
-SUBSYSTEMS=="usb", ATTRS{product}=="USB-RS232 Cable", ATTRS{serial}=="AU06B5E4", SYMLINK+="sbg", GROUP="dialout", MODE="0660"
+# SBG Systems - IMU
+SUBSYSTEMS=="usb", ATTRS{product}=="USB-RS232 Cable", ATTRS{serial}=="AU06AR38", SYMLINK+="sbg", GROUP="dialout", MODE="0660"
+
+# Ardusimple - GNSS
 SUBSYSTEMS=="usb", ATTRS{product}=="u-blox GNSS receiver", SYMLINK+="ardusimple", GROUP="dialout", MODE="0660"
+
+# Arduino Mega
 SUBSYSTEMS=="usb", ATTRS{manufacturer}=="Arduino (www.arduino.cc)", SYMLINK+="arduino", GROUP="dialout", MODE="0660"
-SUBSYSTEMS=="usb", ATTRS{product}=="ZED 2i", ATTRS{manufacturer}=="Technologies, Inc.", SYMLINK+="zed", GROUP="video", MODE="0660"
+
+# Ping2 - Echosounder
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", ATTRS{serial}=="DP05HK4F", SYMLINK+="ping2", GROUP="dialout", MODE="0660"
+
+# Acoustic Modem
+SUBSYSTEMS=="usb", ATTRS{idProduct}=="6001", ATTRS{idVendor}=="0403", ATTRS{serial}=="A5XK3RJT", SYMLINK+="modem", GROUP="dialout", MODE="0660"
+
+# Ping360 - Scanning Sonar
 SUBSYSTEM=="tty", ATTRS{serial}=="DK0GXSZA", SYMLINK+="ping360", GROUP="dialout", MODE="0660"
+
+# Arduino Portenta
 SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="025b", ATTRS{serial}=="Arduino", SYMLINK+="portenta", MODE="0666"
+
+# Logitech C270 HD Webcam
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0825", ATTRS{serial}=="7DE94F40", ATTR{index}=="0", SYMLINK+="bottomcam"
+
+# Lenovo FHD Webcam
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="17ef", ATTRS{idProduct}=="4831", ATTRS{serial}=="SN0001", ATTR{index}=="0", SYMLINK+="frontcam"
