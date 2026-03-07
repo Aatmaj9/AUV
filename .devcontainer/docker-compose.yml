@@ -21,12 +21,14 @@ services:
       - video
       - plugdev
       - render
+      - audio
       - "104"
     device_cgroup_rules:
       - 'c 166:* rmw'   # ttyACM*
       - 'c 188:* rmw'   # ttyUSB*
       - 'c 195:* rmw'   # nvidia devices
       - 'c 104:* rmw'   # DRI render nodes
+      - 'c 81:* rmw'    # video4linux (v4l) devices
     environment:
       - DISPLAY= $DISPLAY
       - NVIDIA_VISIBLE_DEVICES=all
