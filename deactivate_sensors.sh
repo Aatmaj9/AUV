@@ -5,6 +5,6 @@ disown
 
 sleep 1
 
-docker exec auv_dev bash -ic 'ros2 daemon stop' > /dev/null 2>&1
+docker exec auv bash -ic 'ros2 daemon stop' > /dev/null 2>&1
 
 echo "🛑 All sensors deactivated!"
