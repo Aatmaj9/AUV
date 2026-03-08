@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from wlmodem import WlModem  # Ensure this is installed in your Docker
+from wlmodem import WlModem 
 
 class ModemNode(Node):
     def __init__(self):
