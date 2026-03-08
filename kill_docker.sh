@@ -1,2 +1,2 @@
-docker kill auv_dev
+docker kill auv
 docker container prune -f

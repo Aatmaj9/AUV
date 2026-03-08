@@ -129,10 +129,9 @@ RUN apt-get update && \
 USER ${USERNAME}
 
 # -------------------- Install ping-python/brping --------------------
-USER root
-WORKDIR /home/${USERNAME}/ros2_ws/src/ping_sonar_ros/ping_sonar_ros/ping-python
-RUN /usr/bin/python3 setup.py install
 USER ${USERNAME}
+WORKDIR /home/${USERNAME}/ros2_ws/src/ping_sonar_ros/ping_sonar_ros/ping-python
+RUN python setup.py install
 
 # -------------------- Build the sensor ROS Packages once and available directly inside container --------------------
 USER root
@@ -161,7 +160,7 @@ RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py'" >> /
  && echo "alias ping360='sros2 && ros2 run ping360_sonar ping360.py --ros-args -p device:=/dev/ping360'" >> /home/${USERNAME}/.bashrc \
  && echo "alias ping2='sros2 && ros2 run ping_sonar_ros ping1d_node --ros-args -p port:=/dev/ping2'" >> /home/${USERNAME}/.bashrc \
  && echo "alias frontcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/front -p video_device:=/dev/frontcam'" >> /home/${USERNAME}/.bashrc \
- && echo "alias bottomcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/bottom -p video_device:=/dev/bottomcam'" >> /home/${USERNAME}/.bashrc
-
+ && echo "alias bottomcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/bottom -p video_device:=/dev/bottomcam'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias modem='sros2 && scode && ros2 run modem_m64 modem_node --ros-args -p port:=/dev/modem -p role:=a'" >> /home/${USERNAME}/.bashrc && source ~/.bashrc
 # -------------------- Expose Ports --------------------
 EXPOSE 9000 9001 9002 9003

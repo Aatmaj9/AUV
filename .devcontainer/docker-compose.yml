@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: auv_dev
+    container_name: auv
     working_dir: /workspaces/mavlab
     user: "mavlab"
     runtime: nvidia

@@ -4,7 +4,6 @@ websocket-client
 flask
 scikit-learn
 ultralytics
-bluerobotics-ping
 wlmodem
 crcmod
 cobs
