@@ -22,15 +22,17 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
  && rosdep update \
  && rm -rf /var/lib/apt/lists/*
 
- # -------------------- Additional Apt Packages --------------------
+# -------------------- Additional Apt Packages --------------------
 RUN apt-get update && apt-get install -y software-properties-common \
  && apt-add-repository -y universe && apt-get update \
  && apt-get install -y --no-install-recommends \
-      python3-pip python3-serial python3-venv \
+      python3-pip python3-serial \
       sudo xauth htop udev zip unzip git \
       libboost-all-dev libasio-dev \
       v4l-utils \
-      libsm6 libxext6 libxrender1 libfontconfig1 libgl1 libpcap-dev libopencv-dev libyaml-cpp-dev libeigen3-dev libopenblas-dev libopenblas-base \
+      libsm6 libxext6 libxrender1 libfontconfig1 libgl1 \
+      libpcap-dev libopencv-dev libyaml-cpp-dev libeigen3-dev \
+      libopenblas-dev libopenblas-base \
       ros-humble-diagnostic-updater \
       ros-humble-nmea-msgs \
       ros-humble-rtcm-msgs \
@@ -53,12 +55,12 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-v4l2-camera \
       ros-humble-camera-calibration \
  && ln -sf /usr/bin/python3 /usr/bin/python \
- && chmod -R a+rX /usr/local/lib/python3.10/dist-packages /usr/lib/python3/dist-packages \
  && rm -rf /var/lib/apt/lists/*
 
 # -------------------- Create non-root user --------------------
 ARG USERNAME=mavlab
 ENV USERNAME=${USERNAME}
+
 RUN useradd -m "${USERNAME}" \
  && echo "${USERNAME}:${USERNAME}" | chpasswd \
  && usermod --shell /bin/bash "${USERNAME}" \
@@ -66,24 +68,14 @@ RUN useradd -m "${USERNAME}" \
  && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
  && chmod 0440 /etc/sudoers.d/${USERNAME}
 
-# -------------------- Python venv + pip packages --------------------
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
-RUN python3 -m venv --system-site-packages /home/${USERNAME}/.venv
-
-ENV VIRTUAL_ENV=/home/${USERNAME}/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
+# -------------------- Python Dependencies --------------------
 COPY --chown=${USERNAME}:${USERNAME} requirements.txt /home/${USERNAME}/requirements.txt
 
-# Upgrade pip tools
-RUN python3 -m pip install --upgrade pip
-
-# Install remaining Python dependencies
-RUN pip install --no-cache-dir --no-deps -r /home/${USERNAME}/requirements.txt
-
-RUN echo 'source $VIRTUAL_ENV/bin/activate' >> ~/.bashrc
+RUN pip3 install --upgrade pip \
+ && pip3 install --no-cache-dir -r requirements.txt
 
 # -------------------- Arduino CLI setup --------------------
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
@@ -97,8 +89,7 @@ RUN arduino-cli config init \
  && arduino-cli lib install Servo \
  && arduino-cli cache clean
 
-# -------------------- MicroROS and FlySkyIBus arduino Library setup --------------------
-
+# -------------------- Arduino Libraries --------------------
 COPY --chown=${USERNAME}:${USERNAME} micro_ros_arduino.zip /tmp/micro_ros_arduino.zip
 RUN printf "board_manager:\n  additional_urls: []\n\nlibrary:\n  enable_unsafe_install: true\n" > /home/${USERNAME}/.arduino15/arduino-cli.yaml \
  && arduino-cli --config-file /home/${USERNAME}/.arduino15/arduino-cli.yaml lib install --zip-path /tmp/micro_ros_arduino.zip \
@@ -112,37 +103,33 @@ COPY --chown=${USERNAME}:${USERNAME} BlueRobotics_MS5837.zip /tmp/BlueRobotics_M
 RUN arduino-cli --config-file /home/${USERNAME}/.arduino15/arduino-cli.yaml lib install --zip-path /tmp/BlueRobotics_MS5837.zip \
  && rm /tmp/BlueRobotics_MS5837.zip
 
-# -------------------- Sensor ROS Packages to home/mavlab/ros2_ws --------------------
-
+# -------------------- ROS Workspace --------------------
 COPY --chown=${USERNAME}:${USERNAME} packages /home/${USERNAME}/ros2_ws/src
 
-# Remove ZED wrapper for zedless image
 RUN rm -rf /home/${USERNAME}/ros2_ws/src/zed-ros2-wrapper
 
+USER root
 WORKDIR /home/${USERNAME}/ros2_ws
 
-USER root
-WORKDIR /home/mavlab/ros2_ws
 RUN apt-get update && \
     rosdep update && \
     rosdep install --from-paths src --ignore-src -r -y
-USER ${USERNAME}
 
-# -------------------- Install ping-python/brping --------------------
-USER ${USERNAME}
+# -------------------- Install ping-python --------------------
 WORKDIR /home/${USERNAME}/ros2_ws/src/ping_sonar_ros/ping_sonar_ros/ping-python
-RUN python setup.py install
+RUN /usr/bin/python3 setup.py install
 
-# -------------------- Build the sensor ROS Packages once and available directly inside container --------------------
-USER root
+# -------------------- Build Workspace --------------------
 WORKDIR /home/${USERNAME}/ros2_ws
 RUN bash -c "source /opt/ros/humble/setup.bash && \
-             colcon build --symlink-install --cmake-args=-DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)"
+             colcon build --cmake-args=-DCMAKE_BUILD_TYPE=Release --parallel-workers $(nproc)"
+
+# 3. Fix permissions for the mavlab user
+RUN chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/ros2_ws/install
+
+USER ${USERNAME}
 
 # -------------------- ROS 2 bashrc + aliases --------------------
-
-RUN echo 'export PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages:$PYTHONPATH' >> /home/${USERNAME}/.bashrc \
- && echo 'export PATH=$VIRTUAL_ENV/bin:$PATH' >> /home/${USERNAME}/.bashrc
 
 RUN echo 'source /opt/ros/humble/setup.bash' >> /home/${USERNAME}/.bashrc \
  && echo 'if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi' >> /home/${USERNAME}/.bashrc \
@@ -161,6 +148,6 @@ RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py'" >> /
  && echo "alias ping2='sros2 && ros2 run ping_sonar_ros ping1d_node --ros-args -p port:=/dev/ping2'" >> /home/${USERNAME}/.bashrc \
  && echo "alias frontcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/front -p video_device:=/dev/frontcam'" >> /home/${USERNAME}/.bashrc \
  && echo "alias bottomcam='sros2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/bottom -p video_device:=/dev/bottomcam'" >> /home/${USERNAME}/.bashrc \
- && echo "alias modem='sros2 && scode && ros2 run modem_m64 modem_node --ros-args -p port:=/dev/modem -p role:=a'" >> /home/${USERNAME}/.bashrc && source ~/.bashrc
+ && echo "alias modem='sros2 && scode && ros2 run modem_m64 modem_node --ros-args -p port:=/dev/modem -p role:=a'" >> /home/${USERNAME}/.bashrc
 # -------------------- Expose Ports --------------------
 EXPOSE 9000 9001 9002 9003
