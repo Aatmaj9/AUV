@@ -1,5 +1,0 @@
-.vscode
-launch/test.launch
-**/*.pyc
-build/
-*.user

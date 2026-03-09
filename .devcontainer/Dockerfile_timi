@@ -115,9 +115,18 @@ RUN apt-get update && \
     rosdep update && \
     rosdep install --from-paths src --ignore-src -r -y
 
-# -------------------- Install ping-python --------------------
+# -------------------- Install local ping-python --------------------
+USER root
+
+# 1. CLEAN BEFORE: Remove broken library and scripts
+RUN rm -rf /usr/local/lib/python3.10/dist-packages/brping* \
+    && rm -rf /usr/local/lib/python3.10/dist-packages/bluerobotics_ping* \
+    && rm -f /usr/local/bin/pingproxy.py \
+    && rm -f /usr/local/bin/ping1d-simulation.py
+
+# 2. INSTALL: Create fresh 0.1.5 versions
 WORKDIR /home/${USERNAME}/ros2_ws/src/ping_sonar_ros/ping_sonar_ros/ping-python
-RUN /usr/bin/python3 setup.py install
+RUN python3 setup.py install
 
 # -------------------- Build Workspace --------------------
 WORKDIR /home/${USERNAME}/ros2_ws
