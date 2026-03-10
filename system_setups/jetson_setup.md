@@ -7,6 +7,15 @@ nmcli device wifi connect mavlab password mavlab24
 nmcli connection modify mavlab connection.autoconnect yes
 sudo hostnamectl set-hostname masv01
 ```
+------------------------------------------SSH Installation-----------------------------------
+
+```
+sudo apt update
+sudo apt install -y openssh-server
+sudo systemctl enable ssh
+sudo systemctl start ssh
+```
+
 ----------------------------------------------Git installation-------------------------------------
 ```
 sudo apt-get update
