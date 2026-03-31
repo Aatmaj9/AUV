@@ -5,7 +5,7 @@
 nmcli device wifi list
 nmcli device wifi connect mavlab password mavlab24
 nmcli connection modify mavlab connection.autoconnect yes
-sudo hostnamectl set-hostname masv01
+sudo hostnamectl set-hostname timi
 ```
 ------------------------------------------SSH Installation-----------------------------------
 
@@ -64,3 +64,14 @@ sudo nmcli con mod eth_switch connection.autoconnect yes
 sudo nmcli con up eth_switch
 
 ```
+----------------------------------------------- For running SonarView App image and permission for ports -----------------------------------------
+```
+sudo apt update
+sudo apt install libfuse2
+sudo usermod -aG dialout $USER
+```
+
+-------------------------------------------- For DVL--------------------------------------
+
+```
+ssh -L 8080:192.168.194.95:80 timi@192.168.1.162

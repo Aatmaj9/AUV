@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y curl gnupg2 lsb-release \
 RUN apt-get update && apt-get install -y software-properties-common \
  && apt-add-repository -y universe && apt-get update \
  && apt-get install -y --no-install-recommends \
-      python3-pip python3-serial \
+      python3-pip python3-serial python3-opencv \
       sudo xauth htop udev zip unzip git \
       libboost-all-dev libasio-dev \
       v4l-utils \
@@ -75,7 +75,8 @@ WORKDIR /home/${USERNAME}
 COPY --chown=${USERNAME}:${USERNAME} requirements.txt /home/${USERNAME}/requirements.txt
 
 RUN pip3 install --upgrade pip \
- && pip3 install --no-cache-dir -r requirements.txt
+ && pip3 install --no-cache-dir -r requirements.txt \
+ && pip3 install --no-cache-dir --no-deps ultralytics
 
 # -------------------- Arduino CLI setup --------------------
 RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
