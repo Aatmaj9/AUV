@@ -11,8 +11,7 @@ services:
       - /usr/SonarView:/userdata
 
     devices:
-      - /dev:/dev
-      - /run/udev:/run/udev 
+      - /dev/ttyUSB0:/dev/ttyUSB0
 
     group_add:
       - dialout
