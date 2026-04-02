@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 // roslib has no bundled TS types in this setup
 import ROSLIB from "roslib";
+import { TerminalSplitPane } from "../components/TerminalSplitPane";
 
 type TopicsResponse =
   | { code: number; topics: string[]; stderr?: string }
@@ -34,9 +35,10 @@ type UsbDevicesResponse =
 
 function useBackendBaseWsUrl(): string {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
-  // Prefer direct backend WS to avoid dev-proxy flakiness.
-  // Frontend dev server is typically :5173; backend is :8000.
-  return `${proto}://${window.location.hostname}:8000`;
+  // Firefox can fail ws://localhost:8000 while HTTP works; use IPv4 loopback for WS only.
+  const host =
+    window.location.hostname === "localhost" ? "127.0.0.1" : window.location.hostname;
+  return `${proto}://${host}:8000`;
 }
 
 function useBackendBaseHttpUrl(): string {
@@ -48,6 +50,11 @@ export default function App() {
   const [topTab, setTopTab] = useState(0);
   const [leftTab, setLeftTab] = useState(0);
   const [rightTab, setRightTab] = useState(0);
+  const [termsMounted, setTermsMounted] = useState(false);
+
+  useEffect(() => {
+    if (topTab === 2 && !termsMounted) setTermsMounted(true);
+  }, [topTab, termsMounted]);
 
   const [busy, setBusy] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
@@ -90,7 +97,6 @@ export default function App() {
   const [modemTab, setModemTab] = useState(0);
   const [modemLogs, setModemLogs] = useState<Record<string, string>>({});
   const [dvlUrl, setDvlUrl] = useState<string>("");
-  const [sonarViewLaunched, setSonarViewLaunched] = useState(false);
   const modemSubRef = useRef<Record<string, any>>({});
 
   const [echoText, setEchoText] = useState<string>("");
@@ -650,24 +656,6 @@ export default function App() {
     }
   }
 
-  async function runSonarView() {
-    setBusy("/api/sonarview/start");
-    try {
-      const r = await fetch(`${httpBase}/api/sonarview/start`, { method: "POST" });
-      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string };
-      if (j.code !== 0) {
-        appendLog(`[/api/sonarview/start] exit=${j.code}\n${j.stderr ?? ""}\n\n`);
-        return;
-      }
-      setSonarViewLaunched(true);
-      appendLog("[sonarview] launched on AUV\n\n");
-    } catch (e) {
-      appendLog(`[/api/sonarview/start] error: ${String(e)}\n\n`);
-    } finally {
-      setBusy(null);
-    }
-  }
-
   useEffect(() => {
     const id = window.setInterval(async () => {
       try {
@@ -823,12 +811,11 @@ export default function App() {
         <Tabs value={topTab} onChange={(_e, v) => setTopTab(v)} textColor="inherit">
           <Tab label="Connection" />
           <Tab label="SENSORS" />
-          <Tab label="(next) Telemetry" disabled />
-          <Tab label="(next) Mission" disabled />
+          <Tab icon={<img src="/terminator-icon.png" alt="" style={{ width: 20, height: 20 }} />} iconPosition="start" label="TERMINALS" sx={{ ml: "auto", minHeight: 0 }} />
         </Tabs>
       </AppBar>
 
-      {topTab === 0 ? (
+      {topTab === 0 && (
         <Box sx={{ p: 2 }}>
           <Paper sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, maxWidth: 900 }}>
             <Typography variant="h6">Connect to Jetson</Typography>
@@ -881,7 +868,8 @@ export default function App() {
             </Typography>
           </Paper>
         </Box>
-      ) : (
+      )}
+      {topTab === 1 && (
       <Box sx={{ flex: 1, display: "flex", gap: 2, p: 2, overflow: "hidden" }}>
         {/* Left panel (Sensors controls + Topics/Nodes) */}
         <Paper sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -1200,31 +1188,6 @@ export default function App() {
                   Press “VIEW DVL GUI” to expose the DVL UI on <b>http://localhost:8080</b>.
                 </Alert>
               )}
-
-              <Divider />
-
-              <Button
-                variant="contained"
-                disabled={!!busy}
-                onClick={runSonarView}
-                sx={{
-                  width: "fit-content",
-                  bgcolor: "#ffeb3b",
-                  color: "rgba(0,0,0,0.87)",
-                  "&:hover": { bgcolor: "#fdd835" }
-                }}
-              >
-                RUN SONARVIEW
-              </Button>
-              {sonarViewLaunched ? (
-                <Alert severity="success">
-                  SonarView launched on AUV. Please open the SonarView Application on your system and enter the ip address to view the data.
-                </Alert>
-              ) : (
-                <Alert severity="info">
-                  Press “RUN SONARVIEW” to launch the SonarView AppImage on the Jetson (host).
-                </Alert>
-              )}
             </Box>
           )}
 
@@ -1332,6 +1295,8 @@ export default function App() {
         </Paper>
       </Box>
       )}
+      {/* Terminals are always mounted so WS connections + history survive tab switches */}
+      <TerminalSplitPane visible={topTab === 2} mounted={termsMounted} wsBase={wsBase} />
     </Box>
   );
 }

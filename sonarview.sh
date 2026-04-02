@@ -1,1 +1,0 @@
-docker compose -f Sonarview/docker-compose.yml up -d

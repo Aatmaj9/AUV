@@ -8,6 +8,7 @@ import { z } from "zod";
 import { bashLcInDir, buildSshConfig, execOnce, execStream } from "./ssh.js";
 import { Client } from "ssh2";
 import type { ConnectConfig } from "ssh2";
+import type { ClientChannel } from "ssh2";
 
 const cfg = loadConfig();
 const defaultSshConfig = buildSshConfig(cfg);
@@ -285,31 +286,6 @@ app.post(
 );
 
 app.post(
-  "/api/sonarview/start",
-  asyncHandler(async (_req, res) => {
-    const t = getTarget();
-
-    // Launch SonarView AppImage on the Jetson host (NOT inside the docker container).
-    // Use the exact AppImage requested by the user.
-    // Run in background so the HTTP request returns immediately.
-    const cmd = bashLcInDir(
-      t.auvDir,
-      `APP="SonarView-arm64-1.13.14.AppImage"` +
-        `; if [ ! -f "$APP" ]; then echo "Missing $APP in ${t.auvDir}" >&2; exit 2; fi` +
-        `; chmod +x "$APP"` +
-        `; nohup "./$APP" >/tmp/sonarview.log 2>&1 & echo "launched: $APP (pid=$!)"`
-    );
-
-    const r = await execOnce(t.ssh, cmd);
-    if (r.code !== 0) {
-      res.status(500).json(r);
-      return;
-    }
-    res.json({ code: 0, stdout: r.stdout || "sonarview launch requested" });
-  })
-);
-
-app.post(
   "/api/rosbridge/stop",
   asyncHandler(async (_req, res) => {
     const t = getTarget();
@@ -482,8 +458,9 @@ app.use(
 
 const server = http.createServer(app);
 
-// WebSocket: ws://localhost:8000/ws/echo?topic=/foo
-const wss = new WebSocketServer({ server, path: "/ws/echo", perMessageDeflate: false });
+// All WebSocket servers use noServer mode and a single upgrade dispatcher
+// (ws library requires this when sharing one HTTP server across multiple paths).
+const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
 wss.on("connection", (ws, req) => {
   // eslint-disable-next-line no-console
   console.log(`[ws/echo] connected from ${req.socket.remoteAddress ?? "?"}`);
@@ -547,8 +524,7 @@ wss.on("connection", (ws, req) => {
   ws.on("error", () => handle.stop());
 });
 
-// WebSocket: ws://localhost:8000/ws/mros  (streams ./mros.sh output)
-const mrosWss = new WebSocketServer({ server, path: "/ws/mros", perMessageDeflate: false });
+const mrosWss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
 mrosWss.on("connection", (ws) => {
   const t = getTarget();
   const remoteCmd = bashLcInDir(t.auvDir, "./mros.sh");
@@ -576,6 +552,142 @@ mrosWss.on("connection", (ws) => {
 
   ws.on("close", () => handle.stop());
   ws.on("error", () => handle.stop());
+});
+
+const termWss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
+
+server.on("upgrade", (request, socket, head) => {
+  const { pathname } = new URL(request.url ?? "", `http://127.0.0.1:${cfg.BACKEND_PORT}`);
+  if (pathname === "/ws/echo") {
+    wss.handleUpgrade(request, socket, head, (ws) => wss.emit("connection", ws, request));
+  } else if (pathname === "/ws/mros") {
+    mrosWss.handleUpgrade(request, socket, head, (ws) => mrosWss.emit("connection", ws, request));
+  } else if (pathname === "/ws/term") {
+    termWss.handleUpgrade(request, socket, head, (ws) => termWss.emit("connection", ws, request));
+  } else {
+    socket.destroy();
+  }
+});
+termWss.on("connection", (ws, req) => {
+  // eslint-disable-next-line no-console
+  console.log(`[ws/term] new connection from ${req.socket.remoteAddress ?? "?"}`);
+  const t = getTarget();
+  const url = new URL(req.url ?? "", `http://127.0.0.1:${cfg.BACKEND_PORT}`);
+  const mode = (url.searchParams.get("mode") ?? "jetson").trim();
+  const isDocker = mode === "docker";
+
+  const conn = new Client();
+  let ch: ClientChannel | null = null;
+  let rows = 30;
+  let cols = 120;
+  let closed = false;
+
+  const sendStatus = (message: string) => {
+    try {
+      if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "status", message }));
+    } catch {}
+  };
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    try {
+      ch?.close();
+    } catch {}
+    ch = null;
+    try {
+      conn.end();
+    } catch {}
+    try {
+      ws.close();
+    } catch {}
+  };
+
+  ws.on("close", cleanup);
+  ws.on("error", cleanup);
+
+  ws.on("message", (data) => {
+    try {
+      const msg = JSON.parse(String(data)) as any;
+      if (msg?.type === "input" && typeof msg.data === "string") {
+        ch?.write(msg.data);
+      }
+      if (
+        msg?.type === "resize" &&
+        typeof msg.cols === "number" &&
+        typeof msg.rows === "number" &&
+        Number.isFinite(msg.cols) &&
+        Number.isFinite(msg.rows)
+      ) {
+        cols = Math.max(20, Math.min(400, Math.floor(msg.cols)));
+        rows = Math.max(5, Math.min(200, Math.floor(msg.rows)));
+        try {
+          ch?.setWindow(rows, cols, 0, 0);
+        } catch {}
+      }
+    } catch {
+      // ignore malformed messages
+    }
+  });
+
+  conn.on("ready", () => {
+    sendStatus(isDocker ? "docker terminal connecting..." : "jetson terminal connecting...");
+
+    const pty: any = { term: "xterm-256color", cols, rows };
+    if (isDocker) {
+      // Open a shell inside the auv container.
+      const cmd = `docker exec -it -u mavlab auv bash`;
+      conn.exec(cmd, { pty }, (err: Error | undefined, stream: ClientChannel) => {
+        if (err) {
+          sendStatus(`error: ${String(err)}`);
+          cleanup();
+          return;
+        }
+        ch = stream;
+        sendStatus("connected");
+        stream.on("data", (d: Buffer) => {
+          try {
+            if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "output", data: d.toString("utf8") }));
+          } catch {}
+        });
+        stream.stderr.on("data", (d: Buffer) => {
+          try {
+            if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "output", data: d.toString("utf8") }));
+          } catch {}
+        });
+        stream.on("close", cleanup);
+      });
+    } else {
+      conn.shell(pty, (err: Error | undefined, stream: ClientChannel) => {
+        if (err) {
+          sendStatus(`error: ${String(err)}`);
+          cleanup();
+          return;
+        }
+        ch = stream;
+        sendStatus("connected");
+        stream.on("data", (d: Buffer) => {
+          try {
+            if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "output", data: d.toString("utf8") }));
+          } catch {}
+        });
+        stream.stderr.on("data", (d: Buffer) => {
+          try {
+            if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "output", data: d.toString("utf8") }));
+          } catch {}
+        });
+        stream.on("close", cleanup);
+      });
+    }
+  });
+
+  conn.on("error", (e) => {
+    sendStatus(`ssh error: ${String(e)}`);
+    cleanup();
+  });
+
+  conn.on("close", cleanup);
+  conn.connect(t.ssh);
 });
 
 // rosbridge lifecycle is controlled by HTTP endpoints (`/api/rosbridge/start` and `/api/rosbridge/stop`).

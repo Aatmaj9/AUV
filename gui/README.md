@@ -1,76 +1,49 @@
-## AUV Web GUI (PC browser, Jetson execution over SSH)
+# AUV Web GUI
 
-This `gui/` folder is a self-contained web GUI with:
+Web-based GUI for controlling and monitoring the AUV over SSH. Runs on your PC and connects to the Jetson remotely.
 
-- `backend/`: runs on **your PC** and executes commands on the **Jetson** via SSH.
-- `frontend/`: runs in your **browser** and talks to the backend (REST + WebSocket).
-
-Your Jetson is accessed as `timi@192.168.1.162`.
-
----
-
-## How it works
-
-### Buttons (host-side, outside Docker)
-The backend SSHes to the Jetson and runs these in the Jetson AUV folder:
-
-- `./activate_sensors.sh`
-- `./deactivate_sensors.sh`
-
-### ROS2 topics (inside Docker container)
-Your ROS2 nodes run inside the `auv` container (see your scripts). So the backend uses:
-
-- list topics: `docker exec auv bash -ic 'source ~/.bashrc; ros2 topic list'`
-- echo topic: `docker exec auv bash -ic 'source ~/.bashrc; ros2 topic echo <topic>'`
-
-Echo output is streamed back to the browser via WebSocket.
-
----
-
-## Run it on your PC
-
-### 0) Prereqs (PC)
-- Node.js 18+ (recommended 20+)
-- Ability to SSH to Jetson:
+## Setup
 
 ```bash
-ssh timi@192.168.1.162
+# Install dependencies (one-time)
+cd gui/backend  && npm install
+cd ../frontend  && npm install
 ```
-
-### 1) Start backend
-
-```bash
-cd gui/backend
-npm install
-cp .env.example .env
-npm run dev
-```
-
-Backend listens on `http://localhost:8000`.
-
-### 2) Start frontend
-
-In another terminal:
-
-```bash
-cd gui/frontend
-npm install
-npm run dev
-```
-
-Open the URL printed by Vite (usually `http://localhost:5173`).
-
----
 
 ## Configuration
 
-Edit `gui/backend/.env`:
-- `JETSON_HOST` (default `192.168.1.162`)
-- `JETSON_USER` (default `timi`)
-- `JETSON_AUV_DIR` (default `/home/timi/AUV`)
-- `JETSON_PORT` (default `22`)
+Edit `backend/.env` to match your Jetson setup:
 
-Notes:
-- For best UX, set up SSH keys so the backend can connect without password prompts.
-- If `activate_sensors.sh` needs `sudo`, you’ll need passwordless sudo for those specific commands or move them into a service.
+| Variable | Description | Default |
+|---|---|---|
+| `JETSON_HOST` | Jetson IP address | `192.168.1.162` |
+| `JETSON_USER` | SSH username | `timi` |
+| `JETSON_PORT` | SSH port | `22` |
+| `JETSON_AUV_DIR` | Path to AUV folder on Jetson | `/home/timi/AUV` |
+| `JETSON_PASSWORD` | SSH password (optional if using SSH keys) | — |
+| `JETSON_PRIVATE_KEY` | Path to SSH private key (optional) | — |
+| `BACKEND_PORT` | Backend server port | `8000` |
+| `FRONTEND_ORIGIN` | Frontend URL (for CORS) | `http://localhost:5173` |
 
+> **Note:** You can also enter the host, user, and password directly in the GUI's Connection tab at runtime — those values override the `.env` defaults.
+
+## Run
+
+Open two terminals:
+
+```bash
+# Terminal 1 — backend
+cd gui/backend && npm run dev
+
+# Terminal 2 — frontend
+cd gui/frontend && npm run dev
+```
+
+Then open http://localhost:5173 in your browser.
+
+## Features
+
+- **Connection** — Connect to the Jetson via SSH (host/user/password)
+- **Sensors** — Activate/deactivate sensors, list USB devices, ROS topics/nodes, Echo, Plot, Camera, Modem, DVL GUI
+- **Rosbridge** — Toggle rosbridge on/off from the top bar
+- **Terminals** — 4 interactive SSH terminals (2× Jetson host, 2× Docker container) with resizable split panes
