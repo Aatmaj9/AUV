@@ -78,6 +78,7 @@ export default function App() {
   const [connTab, setConnTab] = useState(0);
   const [dockerRunning, setDockerRunning] = useState<boolean | null>(null);
   const [detectedContainer, setDetectedContainer] = useState<string | null>(null);
+  const [allContainers, setAllContainers] = useState<{ name: string; image: string; status: string; id: string }[]>([]);
 
   const [topics, setTopics] = useState<string[]>([]);
   const [nodes, setNodes] = useState<string[]>([]);
@@ -676,6 +677,7 @@ export default function App() {
     } catch {
       setDockerRunning(null);
     }
+    fetchContainerList();
   }
 
   async function startContainer() {
@@ -690,6 +692,7 @@ export default function App() {
       appendLog(`[docker] container started${j.containerName ? ` (${j.containerName})` : ""}\n\n`);
       if (j.containerName) setDetectedContainer(j.containerName);
       setDockerRunning(true);
+      fetchContainerList();
     } catch (e) {
       appendLog(`[docker] start error: ${String(e)}\n\n`);
     } finally {
@@ -704,8 +707,37 @@ export default function App() {
       const j = (await r.json()) as { code: number; stdout?: string; stderr?: string };
       appendLog(`[docker] container stopped\n\n`);
       setDockerRunning(false);
+      fetchContainerList();
     } catch (e) {
       appendLog(`[docker] stop error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function fetchContainerList() {
+    try {
+      const r = await fetch(`${httpBase}/api/docker/list`);
+      const j = (await r.json()) as { containers: { name: string; image: string; status: string; id: string }[] };
+      setAllContainers(j.containers ?? []);
+    } catch {
+      setAllContainers([]);
+    }
+  }
+
+  async function killContainer(name: string) {
+    setBusy(`/api/docker/kill/${name}`);
+    try {
+      await fetch(`${httpBase}/api/docker/kill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      appendLog(`[docker] killed & removed: ${name}\n\n`);
+      await fetchContainerList();
+      await fetchDockerStatus();
+    } catch (e) {
+      appendLog(`[docker] kill error: ${String(e)}\n\n`);
     } finally {
       setBusy(null);
     }
@@ -973,17 +1005,18 @@ export default function App() {
             )}
             {connTab === 1 && (
             <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-              <Typography variant="h6">Docker Container</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                Uses <code>{jetsonAuvDir}/.devcontainer/docker-compose.yml</code> on the Jetson.
-              </Typography>
-              {detectedContainer && (
-                <Chip label={`Container: ${detectedContainer}`} color={dockerRunning ? "success" : "default"} variant="outlined" />
-              )}
               {!connected ? (
                 <Alert severity="warning">Connect to the Jetson first (SSH tab).</Alert>
               ) : (
                 <>
+                  {/* Compose container section */}
+                  <Typography variant="h6">Compose Container</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                    Uses <code>{jetsonAuvDir}/.devcontainer/docker-compose.yml</code> on the Jetson.
+                  </Typography>
+                  {detectedContainer && (
+                    <Chip label={`Container: ${detectedContainer}`} color={dockerRunning ? "success" : "default"} variant="outlined" />
+                  )}
                   <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                     <Button variant="contained" color="success" disabled={!!busy || dockerRunning === true} onClick={startContainer}>
                       Start Container
@@ -992,7 +1025,7 @@ export default function App() {
                       Stop Container
                     </Button>
                     <Button variant="outlined" disabled={!!busy} onClick={fetchDockerStatus}>
-                      Refresh Status
+                      Refresh
                     </Button>
                   </Box>
                   {dockerRunning === true && (
@@ -1002,7 +1035,36 @@ export default function App() {
                     <Alert severity="info">Container is not running. Click Start to launch it.</Alert>
                   )}
                   {dockerRunning === null && (
-                    <Alert severity="info">Click Refresh Status to check.</Alert>
+                    <Alert severity="info">Click Refresh to check status.</Alert>
+                  )}
+
+                  <Divider sx={{ my: 1 }} />
+
+                  {/* All running containers section */}
+                  <Typography variant="h6">All Running Containers</Typography>
+                  {allContainers.length === 0 ? (
+                    <Typography variant="body2" sx={{ opacity: 0.5 }}>No running containers found. Click Refresh above.</Typography>
+                  ) : (
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      {allContainers.map((c) => (
+                        <Paper key={c.id} variant="outlined" sx={{ p: 1.5, display: "flex", alignItems: "center", gap: 2 }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" sx={{ fontFamily: "monospace" }}>{c.name}</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.6, display: "block" }}>{c.image}</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.5, display: "block" }}>{c.status}</Typography>
+                          </Box>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            disabled={!!busy}
+                            onClick={() => killContainer(c.name)}
+                          >
+                            Kill &amp; Remove
+                          </Button>
+                        </Paper>
+                      ))}
+                    </Box>
                   )}
                 </>
               )}

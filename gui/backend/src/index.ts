@@ -190,6 +190,44 @@ app.post(
 );
 
 app.get(
+  "/api/docker/list",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const fmt = '{"name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","id":"{{.ID}}"}';
+    const cmd = `docker ps --format '${fmt}'`;
+    const r = await execOnce(t.ssh, cmd);
+    if (r.code !== 0) {
+      res.status(500).json(r);
+      return;
+    }
+    const containers = r.stdout
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        try { return JSON.parse(line); }
+        catch { return null; }
+      })
+      .filter(Boolean);
+    res.json({ containers });
+  })
+);
+
+const KillBody = z.object({ name: z.string().min(1) });
+
+app.post(
+  "/api/docker/kill",
+  asyncHandler(async (req, res) => {
+    const t = getTarget();
+    const body = KillBody.parse(req.body ?? {});
+    const name = body.name;
+    const cmd = `docker kill ${shSingleQuote(name)} 2>/dev/null; docker rm -f ${shSingleQuote(name)} 2>/dev/null; echo done`;
+    const r = await execOnce(t.ssh, cmd);
+    res.json({ code: 0, name, stdout: r.stdout });
+  })
+);
+
+app.get(
   "/api/status",
   asyncHandler(async (_req, res) => {
     const t = getTarget();
