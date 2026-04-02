@@ -17,6 +17,7 @@ let activeTarget: {
   auvDir: string;
   label: string;
   password?: string;
+  containerName: string | null;
 } | null = null;
 
 
@@ -52,8 +53,20 @@ function getTarget() {
       auvDir: cfg.JETSON_AUV_DIR,
       label: `${cfg.JETSON_USER}@${cfg.JETSON_HOST}`,
       password: cfg.JETSON_PASSWORD,
+      containerName: cfg.DOCKER_CONTAINER as string | null,
     }
   );
+}
+
+function composeFile(t: ReturnType<typeof getTarget>): string {
+  return `${t.auvDir}/.devcontainer/docker-compose.yml`;
+}
+
+async function detectContainerName(t: ReturnType<typeof getTarget>): Promise<string | null> {
+  const cmd = `bash -lc "grep 'container_name:' ${shSingleQuote(composeFile(t))} 2>/dev/null | head -1 | sed 's/.*container_name: *//'"`;
+  const r = await execOnce(t.ssh, cmd);
+  const name = r.stdout.trim();
+  return name || null;
 }
 
 async function tcpConnectMs(host: string, port: number, timeoutMs: number): Promise<number | null> {
@@ -119,9 +132,60 @@ app.post(
       auvDir,
       label: `${body.user}@${body.host}`,
       password: body.password,
+      containerName: null,
     };
 
-    res.json({ ok: true, code: 0, target: activeTarget.label, auvDir: activeTarget.auvDir });
+    // Auto-detect container name from docker-compose.yml
+    const detected = await detectContainerName(activeTarget).catch(() => null);
+    activeTarget.containerName = detected;
+
+    res.json({ ok: true, code: 0, target: activeTarget.label, auvDir: activeTarget.auvDir, containerName: detected });
+  })
+);
+
+app.get(
+  "/api/docker/status",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    if (!t.containerName) {
+      res.json({ running: false, containerName: null, error: "container name not detected" });
+      return;
+    }
+    const cmd = `docker inspect --format '{{.State.Running}}' ${shSingleQuote(t.containerName)} 2>/dev/null || echo false`;
+    const r = await execOnce(t.ssh, cmd);
+    const running = r.stdout.trim() === "true";
+    res.json({ running, containerName: t.containerName });
+  })
+);
+
+app.post(
+  "/api/docker/start",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const cf = composeFile(t);
+    const cmd = bashLcInDir(t.auvDir, `docker compose -f ${shSingleQuote(cf)} up -d`);
+    const r = await execOnce(t.ssh, cmd);
+    if (r.code !== 0) {
+      res.status(500).json(r);
+      return;
+    }
+    // Re-detect container name in case it wasn't known before
+    if (!t.containerName && activeTarget) {
+      const detected = await detectContainerName(t).catch(() => null);
+      activeTarget.containerName = detected;
+    }
+    res.json({ code: 0, stdout: r.stdout, containerName: t.containerName });
+  })
+);
+
+app.post(
+  "/api/docker/stop",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const cf = composeFile(t);
+    const cmd = bashLcInDir(t.auvDir, `docker compose -f ${shSingleQuote(cf)} down`);
+    const r = await execOnce(t.ssh, cmd);
+    res.json(r);
   })
 );
 
@@ -180,12 +244,12 @@ app.post(
 
     // Safety: if rosbridge is already running from a previous attempt, stop it first.
     // This keeps the toggle simple and prevents "Address already in use" conflicts.
-    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`);
+    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`, t.containerName);
     void execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
 
     // Run EXACTLY like your manual terminal test:
     // `cd /workspaces/mavlab && bash ./rosbridge.sh`
-    const remoteCmd = dockerRos2Interactive(`cd /workspaces/mavlab && bash ./rosbridge.sh`);
+    const remoteCmd = dockerRos2Interactive(`cd /workspaces/mavlab && bash ./rosbridge.sh`, t.containerName);
 
     rosbridgeHandle = execStream(
       t.ssh,
@@ -298,7 +362,7 @@ app.post(
     }
 
     // Safety: ensure port 9090 is closed even if Ctrl+C doesn't fully stop all children.
-    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`);
+    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`, t.containerName);
     void execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
 
     res.json({ code: 0, stdout: "rosbridge stop requested" });
@@ -319,28 +383,24 @@ function withSudoPasswordIfAny(
   return `printf "%s\\n" "${pwEsc}" | sudo -S -p '' bash -lc "${wrapped}"`;
 }
 
-function dockerRos2(cmd: string): string {
-  // Run as mavlab, and explicitly source ROS + overlays (do not rely on bashrc/login shell behavior).
-  // - /opt/ros/humble: base ROS2
-  // - /home/mavlab/ros2_ws/install: built into the image (packages/)
-  // - /workspaces/mavlab/code_ws/install: mounted workspace (optional)
+function dockerRos2(cmd: string, container: string | null = "auv"): string {
+  const c = container ?? "auv";
   const prefix =
     "source /opt/ros/humble/setup.bash" +
     " && if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi" +
     " && if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi";
   const inner = `${prefix} && ${cmd}`;
-  return `docker exec -u mavlab auv bash -lc "${inner.replaceAll('"', '\\"')}"`;
+  return `docker exec -u mavlab ${c} bash -lc "${inner.replaceAll('"', '\\"')}"`;
 }
 
-function dockerRos2Interactive(cmd: string): string {
-  // Same as dockerRos2, but allocates a TTY (-t). This makes Ctrl+C propagate more reliably
-  // to foreground processes started via execStream.
+function dockerRos2Interactive(cmd: string, container: string | null = "auv"): string {
+  const c = container ?? "auv";
   const prefix =
     "source /opt/ros/humble/setup.bash" +
     " && if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi" +
     " && if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi";
   const inner = `${prefix} && ${cmd}`;
-  return `docker exec -it -u mavlab auv bash -lc "${inner.replaceAll('"', '\\"')}"`;
+  return `docker exec -it -u mavlab ${c} bash -lc "${inner.replaceAll('"', '\\"')}"`;
 }
 
 app.post(
@@ -387,7 +447,7 @@ app.get(
     const t = getTarget();
     const cmd = bashLcInDir(
       t.auvDir,
-      dockerRos2("ros2 topic list")
+      dockerRos2("ros2 topic list", t.containerName)
     );
     const r = await execOnce(t.ssh, cmd);
     if (r.code !== 0) {
@@ -406,7 +466,7 @@ app.get(
   "/api/ros/nodes",
   asyncHandler(async (_req, res) => {
     const t = getTarget();
-    const cmd = bashLcInDir(t.auvDir, dockerRos2("ros2 node list"));
+    const cmd = bashLcInDir(t.auvDir, dockerRos2("ros2 node list", t.containerName));
     const r = await execOnce(t.ssh, cmd);
     if (r.code !== 0) {
       res.status(500).json(r);
@@ -440,7 +500,8 @@ app.post(
     const cmd = bashLcInDir(
       t.auvDir,
       dockerRos2(
-        `ros2 topic pub --once ${shSingleQuote(topic)} std_msgs/msg/String ${shSingleQuote(msg)}`
+        `ros2 topic pub --once ${shSingleQuote(topic)} std_msgs/msg/String ${shSingleQuote(msg)}`,
+        t.containerName
       )
     );
     const r = await execOnce(t.ssh, cmd);
@@ -469,14 +530,15 @@ app.post(
 
     const mkdirCmd = bashLcInDir(
       t.auvDir,
-      dockerRos2("mkdir -p /workspaces/mavlab/rosbags")
+      dockerRos2("mkdir -p /workspaces/mavlab/rosbags", t.containerName)
     );
     await execOnce(t.ssh, mkdirCmd).catch(() => null);
 
     const topicList = body.topics.map((tp) => shSingleQuote(tp)).join(" ");
     const bagName = `run${rosbagRunIndex}`;
     const recordCmd = dockerRos2Interactive(
-      `ros2 bag record ${topicList} -o /workspaces/mavlab/rosbags/${bagName}`
+      `ros2 bag record ${topicList} -o /workspaces/mavlab/rosbags/${bagName}`,
+      t.containerName
     );
     const remoteCmd = bashLcInDir(t.auvDir, recordCmd);
 
@@ -559,7 +621,7 @@ wss.on("connection", (ws, req) => {
   const topicQ = shSingleQuote(topic);
   const remoteCmd = bashLcInDir(
     t.auvDir,
-    dockerRos2(`ros2 topic echo ${topicQ}`)
+    dockerRos2(`ros2 topic echo ${topicQ}`, t.containerName)
   );
 
   ws.send(JSON.stringify({ type: "status", message: `echo started: ${topic}` }));
@@ -703,8 +765,8 @@ termWss.on("connection", (ws, req) => {
 
     const pty: any = { term: "xterm-256color", cols, rows };
     if (isDocker) {
-      // Open a shell inside the auv container.
-      const cmd = `docker exec -it -u mavlab auv bash`;
+      const cname = t.containerName ?? "auv";
+      const cmd = `docker exec -it -u mavlab ${cname} bash`;
       conn.exec(cmd, { pty }, (err: Error | undefined, stream: ClientChannel) => {
         if (err) {
           sendStatus(`error: ${String(err)}`);

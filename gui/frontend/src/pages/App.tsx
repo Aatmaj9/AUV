@@ -75,6 +75,9 @@ export default function App() {
   const [jetsonPort, setJetsonPort] = useState("22");
   const [jetsonPassword, setJetsonPassword] = useState("");
   const [jetsonAuvDir, setJetsonAuvDir] = useState("/home/timi/AUV");
+  const [connTab, setConnTab] = useState(0);
+  const [dockerRunning, setDockerRunning] = useState<boolean | null>(null);
+  const [detectedContainer, setDetectedContainer] = useState<string | null>(null);
 
   const [topics, setTopics] = useState<string[]>([]);
   const [nodes, setNodes] = useState<string[]>([]);
@@ -259,7 +262,7 @@ export default function App() {
           auvDir: jetsonAuvDir.trim()
         })
       });
-      const j = (await r.json()) as { ok?: boolean; stderr?: string; target?: string };
+      const j = (await r.json()) as { ok?: boolean; stderr?: string; target?: string; containerName?: string };
       if (!r.ok || !j.ok) {
         setConnected(false);
         setConnectedLabel("not connected");
@@ -268,7 +271,10 @@ export default function App() {
       }
       setConnected(true);
       setConnectedLabel(j.target ?? "connected");
-      appendLog(`[connect] ok: ${j.target ?? ""}\n\n`);
+      setDetectedContainer(j.containerName ?? null);
+      appendLog(`[connect] ok: ${j.target ?? ""}${j.containerName ? ` (container: ${j.containerName})` : ""}\n\n`);
+      // Auto-check docker status after connecting
+      setTimeout(() => fetchDockerStatus(), 500);
     } catch (e) {
       setConnected(false);
       setConnectedLabel("not connected");
@@ -661,6 +667,50 @@ export default function App() {
     }
   }
 
+  async function fetchDockerStatus() {
+    try {
+      const r = await fetch(`${httpBase}/api/docker/status`);
+      const j = (await r.json()) as { running: boolean; containerName?: string };
+      setDockerRunning(j.running);
+      if (j.containerName) setDetectedContainer(j.containerName);
+    } catch {
+      setDockerRunning(null);
+    }
+  }
+
+  async function startContainer() {
+    setBusy("/api/docker/start");
+    try {
+      const r = await fetch(`${httpBase}/api/docker/start`, { method: "POST" });
+      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string; containerName?: string };
+      if (j.code !== 0) {
+        appendLog(`[docker] start failed\n${j.stderr ?? ""}\n\n`);
+        return;
+      }
+      appendLog(`[docker] container started${j.containerName ? ` (${j.containerName})` : ""}\n\n`);
+      if (j.containerName) setDetectedContainer(j.containerName);
+      setDockerRunning(true);
+    } catch (e) {
+      appendLog(`[docker] start error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function stopContainer() {
+    setBusy("/api/docker/stop");
+    try {
+      const r = await fetch(`${httpBase}/api/docker/stop`, { method: "POST" });
+      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string };
+      appendLog(`[docker] container stopped\n\n`);
+      setDockerRunning(false);
+    } catch (e) {
+      appendLog(`[docker] stop error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function startRosbag() {
     const selected = topics.filter((t) => rosbagChecked[t]);
     if (selected.length === 0) {
@@ -862,8 +912,15 @@ export default function App() {
       </AppBar>
 
       {topTab === 0 && (
-        <Box sx={{ p: 2 }}>
-          <Paper sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, maxWidth: 900 }}>
+        <Box sx={{ p: 2, maxWidth: 900 }}>
+          <Paper sx={{ display: "flex", flexDirection: "column" }}>
+            <Tabs value={connTab} onChange={(_e, v) => setConnTab(v)}>
+              <Tab label="SSH" />
+              <Tab label="Docker" />
+            </Tabs>
+            <Divider />
+            {connTab === 0 && (
+            <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
             <Typography variant="h6">Connect to Jetson</Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <TextField
@@ -898,7 +955,7 @@ export default function App() {
               />
               <TextField
                 size="small"
-                label="Jetson AUV dir"
+                label="AUV Directory"
                 value={jetsonAuvDir}
                 onChange={(e) => setJetsonAuvDir(e.target.value)}
                 fullWidth
@@ -910,8 +967,47 @@ export default function App() {
               </Button>
             </Box>
             <Typography variant="body2" sx={{ opacity: 0.8 }}>
-              After you see “Connected”, go to the SENSORS tab.
+              After you see &quot;Connected&quot;, go to the SENSORS tab.
             </Typography>
+            </Box>
+            )}
+            {connTab === 1 && (
+            <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+              <Typography variant="h6">Docker Container</Typography>
+              <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                Uses <code>{jetsonAuvDir}/.devcontainer/docker-compose.yml</code> on the Jetson.
+              </Typography>
+              {detectedContainer && (
+                <Chip label={`Container: ${detectedContainer}`} color={dockerRunning ? "success" : "default"} variant="outlined" />
+              )}
+              {!connected ? (
+                <Alert severity="warning">Connect to the Jetson first (SSH tab).</Alert>
+              ) : (
+                <>
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                    <Button variant="contained" color="success" disabled={!!busy || dockerRunning === true} onClick={startContainer}>
+                      Start Container
+                    </Button>
+                    <Button variant="contained" color="error" disabled={!!busy || dockerRunning === false} onClick={stopContainer}>
+                      Stop Container
+                    </Button>
+                    <Button variant="outlined" disabled={!!busy} onClick={fetchDockerStatus}>
+                      Refresh Status
+                    </Button>
+                  </Box>
+                  {dockerRunning === true && (
+                    <Alert severity="success">Container <strong>{detectedContainer}</strong> is running.</Alert>
+                  )}
+                  {dockerRunning === false && (
+                    <Alert severity="info">Container is not running. Click Start to launch it.</Alert>
+                  )}
+                  {dockerRunning === null && (
+                    <Alert severity="info">Click Refresh Status to check.</Alert>
+                  )}
+                </>
+              )}
+            </Box>
+            )}
           </Paper>
         </Box>
       )}
