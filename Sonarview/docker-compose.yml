@@ -11,7 +11,8 @@ services:
       - /usr/SonarView:/userdata
 
     devices:
-      - /dev:/dev 
+      - /dev:/dev
+      - /run/udev:/run/udev 
 
     group_add:
       - dialout
