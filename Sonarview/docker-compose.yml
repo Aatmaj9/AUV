@@ -15,6 +15,7 @@ services:
 
     group_add:
       - dialout
+      - "20"
 
     environment:
       - ENABLE_OS3D=false
