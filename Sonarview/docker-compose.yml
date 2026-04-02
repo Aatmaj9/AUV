@@ -15,7 +15,6 @@ services:
 
     group_add:
       - dialout
-      - plugdev
 
     environment:
       - ENABLE_OS3D=false
