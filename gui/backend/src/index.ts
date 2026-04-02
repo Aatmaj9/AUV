@@ -448,6 +448,74 @@ app.post(
   })
 );
 
+// ── Rosbag recording ────────────────────────────────────────────────
+let rosbagHandle: { stop: () => void } | null = null;
+let rosbagRunIndex = 1;
+
+const RosbagStartBody = z.object({
+  topics: z.array(z.string().min(1)).min(1),
+});
+
+app.post(
+  "/api/rosbag/start",
+  asyncHandler(async (req, res) => {
+    const t = getTarget();
+    const body = RosbagStartBody.parse(req.body ?? {});
+
+    if (rosbagHandle) {
+      res.status(409).json({ code: 1, stderr: "rosbag recording already running — stop it first" });
+      return;
+    }
+
+    const mkdirCmd = bashLcInDir(
+      t.auvDir,
+      dockerRos2("mkdir -p /workspaces/mavlab/rosbags")
+    );
+    await execOnce(t.ssh, mkdirCmd).catch(() => null);
+
+    const topicList = body.topics.map((tp) => shSingleQuote(tp)).join(" ");
+    const bagName = `run${rosbagRunIndex}`;
+    const recordCmd = dockerRos2Interactive(
+      `ros2 bag record ${topicList} -o /workspaces/mavlab/rosbags/${bagName}`
+    );
+    const remoteCmd = bashLcInDir(t.auvDir, recordCmd);
+
+    rosbagHandle = execStream(
+      t.ssh,
+      remoteCmd,
+      () => {},
+      (chunk) => {
+        // eslint-disable-next-line no-console
+        console.log(`[rosbag stderr] ${chunk.trim()}`);
+      },
+      () => {
+        rosbagHandle = null;
+      },
+      { pty: true, sendSigintOnStop: true, retries: 0 }
+    );
+
+    res.json({ code: 0, stdout: `recording started → rosbags/${bagName}`, bagName });
+  })
+);
+
+app.post(
+  "/api/rosbag/stop",
+  asyncHandler(async (_req, res) => {
+    if (!rosbagHandle) {
+      res.json({ code: 0, stdout: "no recording running" });
+      return;
+    }
+
+    try {
+      rosbagHandle.stop();
+    } catch {}
+    rosbagHandle = null;
+    rosbagRunIndex += 1;
+
+    res.json({ code: 0, stdout: "recording stopped" });
+  })
+);
+
 app.use(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -16,6 +16,8 @@ import {
   Tooltip,
   Switch,
   Link,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 // roslib has no bundled TS types in this setup
 import ROSLIB from "roslib";
@@ -98,6 +100,9 @@ export default function App() {
   const [modemLogs, setModemLogs] = useState<Record<string, string>>({});
   const [dvlUrl, setDvlUrl] = useState<string>("");
   const modemSubRef = useRef<Record<string, any>>({});
+
+  const [rosbagChecked, setRosbagChecked] = useState<Record<string, boolean>>({});
+  const [rosbagRecording, setRosbagRecording] = useState(false);
 
   const [echoText, setEchoText] = useState<string>("");
   const [logText, setLogText] = useState<string>("");
@@ -656,6 +661,47 @@ export default function App() {
     }
   }
 
+  async function startRosbag() {
+    const selected = topics.filter((t) => rosbagChecked[t]);
+    if (selected.length === 0) {
+      appendLog("[rosbag] select at least one topic\n\n");
+      return;
+    }
+    setBusy("/api/rosbag/start");
+    try {
+      const r = await fetch(`${httpBase}/api/rosbag/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topics: selected }),
+      });
+      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string; bagName?: string };
+      if (j.code !== 0) {
+        appendLog(`[rosbag] error: ${j.stderr ?? "unknown"}\n\n`);
+        return;
+      }
+      setRosbagRecording(true);
+      appendLog(`[rosbag] data collection started → ${j.bagName ?? "rosbags/"}\n\n`);
+    } catch (e) {
+      appendLog(`[rosbag] error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function stopRosbag() {
+    setBusy("/api/rosbag/stop");
+    try {
+      const r = await fetch(`${httpBase}/api/rosbag/stop`, { method: "POST" });
+      const j = (await r.json()) as { code: number; stdout?: string };
+      setRosbagRecording(false);
+      appendLog(`[rosbag] data collection stopped\n\n`);
+    } catch (e) {
+      appendLog(`[rosbag] error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   useEffect(() => {
     const id = window.setInterval(async () => {
       try {
@@ -1026,6 +1072,7 @@ export default function App() {
             <Tab label="Cameras" />
             <Tab label="SONARS" />
             <Tab label="Modem" />
+            <Tab label="Record Data" />
           </Tabs>
           <Divider />
 
@@ -1246,6 +1293,79 @@ export default function App() {
                   {modemTopics[modemTab] ? modemLogs[modemTopics[modemTab]] ?? "" : ""}
                 </Box>
               </Paper>
+            </Box>
+          )}
+
+          {rightTab === 5 && (
+            <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1, overflow: "auto", flex: 1 }}>
+              <Typography variant="subtitle2">Select topics to record:</Typography>
+              <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => {
+                    const all: Record<string, boolean> = {};
+                    topics.forEach((t) => { all[t] = true; });
+                    setRosbagChecked(all);
+                  }}
+                >
+                  Select All
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => setRosbagChecked({})}
+                >
+                  Deselect All
+                </Button>
+              </Box>
+              <Box sx={{ flex: 1, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1, p: 1 }}>
+                {topics.length === 0 ? (
+                  <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                    No topics available — fetch topics from the Devices tab first.
+                  </Typography>
+                ) : (
+                  topics.map((t) => (
+                    <FormControlLabel
+                      key={t}
+                      sx={{ display: "flex", ml: 0, mr: 0 }}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={!!rosbagChecked[t]}
+                          onChange={(e) =>
+                            setRosbagChecked((prev) => ({ ...prev, [t]: e.target.checked }))
+                          }
+                        />
+                      }
+                      label={<Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 12 }}>{t}</Typography>}
+                    />
+                  ))
+                )}
+              </Box>
+              <Box sx={{ display: "flex", gap: 1, pt: 1 }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  disabled={!!busy || rosbagRecording || topics.filter((t) => rosbagChecked[t]).length === 0}
+                  onClick={startRosbag}
+                >
+                  Start Record
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  disabled={!!busy || !rosbagRecording}
+                  onClick={stopRosbag}
+                >
+                  Stop Record
+                </Button>
+                {rosbagRecording && (
+                  <Typography variant="body2" sx={{ alignSelf: "center", color: "success.main", fontWeight: 600 }}>
+                    ● Recording...
+                  </Typography>
+                )}
+              </Box>
             </Box>
           )}
             </Box>
