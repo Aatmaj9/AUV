@@ -479,6 +479,16 @@ app.get(
   })
 );
 
+app.post(
+  "/api/devices/udev",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const cmd = withSudoPasswordIfAny(t, bashLcInDir(t.auvDir, "bash ./udev.sh"));
+    const r = await execOnce(t.ssh, cmd);
+    res.json(r);
+  })
+);
+
 app.get(
   "/api/ros/topics",
   asyncHandler(async (_req, res) => {

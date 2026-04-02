@@ -381,6 +381,23 @@ export default function App() {
     }
   }
 
+  async function applyUdevRules() {
+    setBusy("/api/devices/udev");
+    try {
+      const r = await fetch(`${httpBase}/api/devices/udev`, { method: "POST" });
+      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string };
+      if (j.code !== 0) {
+        appendLog(`[udev] failed (exit=${j.code})\n${j.stderr ?? ""}\n\n`);
+      } else {
+        appendLog(`[udev] rules applied successfully\n\n`);
+      }
+    } catch (e) {
+      appendLog(`[udev] error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function stopEcho() {
     const ws = wsRef.current;
     wsRef.current = null;
@@ -1129,6 +1146,13 @@ export default function App() {
                 onClick={refreshUsbDevices}
               >
                 List USB Devices
+              </Button>
+              <Button
+                variant="contained"
+                disabled={!!busy}
+                onClick={applyUdevRules}
+              >
+                Apply Udev Rules
               </Button>
             </Box>
           ) : leftTab === 1 ? (
