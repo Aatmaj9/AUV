@@ -490,6 +490,36 @@ app.post(
 );
 
 app.get(
+  "/api/devices/udev-map",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const rulesFile = `${t.auvDir}/99-usb-serial.rules`;
+    const script = [
+      `symlinks=$(grep -oP "SYMLINK\\+=\\"\\K[^\\"]+" ${shSingleQuote(rulesFile)} 2>/dev/null)`,
+      `for dev in $symlinks; do`,
+      `  if [ -e "/dev/$dev" ]; then`,
+      `    real=$(readlink -f "/dev/$dev")`,
+      `    echo "$dev|$real|active"`,
+      `  else`,
+      `    echo "$dev||not_found"`,
+      `  fi`,
+      `done`,
+    ].join("\n");
+    const cmd = `bash -lc '${script.replaceAll("'", "'\"'\"'")}'`;
+    const r = await execOnce(t.ssh, cmd);
+    const mappings = r.stdout
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [symlink, realDevice, status] = line.split("|");
+        return { symlink: `/dev/${symlink}`, realDevice: realDevice || null, status };
+      });
+    res.json({ mappings });
+  })
+);
+
+app.get(
   "/api/ros/topics",
   asyncHandler(async (_req, res) => {
     const t = getTarget();

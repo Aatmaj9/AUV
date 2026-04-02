@@ -83,6 +83,7 @@ export default function App() {
   const [topics, setTopics] = useState<string[]>([]);
   const [nodes, setNodes] = useState<string[]>([]);
   const [usbDevices, setUsbDevices] = useState<string[]>([]);
+  const [udevMap, setUdevMap] = useState<{ symlink: string; realDevice: string | null; status: string }[]>([]);
   const [mrosText, setMrosText] = useState<string>("");
   const mrosWsRef = useRef<WebSocket | null>(null);
   const [topicFilter, setTopicFilter] = useState("");
@@ -381,6 +382,16 @@ export default function App() {
     }
   }
 
+  async function fetchUdevMap() {
+    try {
+      const r = await fetch(`${httpBase}/api/devices/udev-map`);
+      const j = (await r.json()) as { mappings: { symlink: string; realDevice: string | null; status: string }[] };
+      setUdevMap(j.mappings ?? []);
+    } catch {
+      setUdevMap([]);
+    }
+  }
+
   async function applyUdevRules() {
     setBusy("/api/devices/udev");
     try {
@@ -390,6 +401,7 @@ export default function App() {
         appendLog(`[udev] failed (exit=${j.code})\n${j.stderr ?? ""}\n\n`);
       } else {
         appendLog(`[udev] rules applied successfully\n\n`);
+        await fetchUdevMap();
       }
     } catch (e) {
       appendLog(`[udev] error: ${String(e)}\n\n`);
@@ -1194,17 +1206,40 @@ export default function App() {
 
           <Box sx={{ flex: 1, overflow: "auto" }}>
             {leftTab === 0
-              ? usbDevices.map((d) => (
-                  <Box
-                    key={d}
-                    sx={{
-                      px: 2,
-                      py: 1
-                    }}
-                  >
-                    <Typography variant="body2">{d}</Typography>
-                  </Box>
-                ))
+              ? (
+                <Box>
+                  {usbDevices.map((d) => (
+                    <Box key={d} sx={{ px: 2, py: 1 }}>
+                      <Typography variant="body2">{d}</Typography>
+                    </Box>
+                  ))}
+                  {udevMap.length > 0 && (
+                    <>
+                      <Divider sx={{ my: 1 }} />
+                      <Box sx={{ px: 2, pb: 1 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>Udev Symlink Mapping</Typography>
+                        {udevMap.map((m) => (
+                          <Box key={m.symlink} sx={{ display: "flex", gap: 1, alignItems: "center", py: 0.5 }}>
+                            <Chip
+                              size="small"
+                              label={m.status === "active" ? "ACTIVE" : "NOT FOUND"}
+                              color={m.status === "active" ? "success" : "default"}
+                              sx={{ width: 90, fontFamily: "monospace", fontSize: 11 }}
+                            />
+                            <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 13, minWidth: 130 }}>
+                              {m.symlink}
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.5 }}>{"\u2192"}</Typography>
+                            <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 13 }}>
+                              {m.realDevice ?? "—"}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </>
+                  )}
+                </Box>
+              )
               : leftTab === 1
               ? (
                   <Box
