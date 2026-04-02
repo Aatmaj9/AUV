@@ -6,6 +6,7 @@ import { WebSocketServer } from "ws";
 import { loadConfig } from "./config.js";
 import { z } from "zod";
 import { bashLcInDir, buildSshConfig, execOnce, execStream } from "./ssh.js";
+import { Client } from "ssh2";
 import type { ConnectConfig } from "ssh2";
 
 const cfg = loadConfig();
@@ -150,6 +151,184 @@ app.get(
   })
 );
 
+// rosbridge lifecycle controlled by HTTP (toggle start/stop).
+let rosbridgeHandle: { stop: () => void } | null = null;
+
+// DVL GUI tunnel (local port-forward): localhost:8080 -> (via Jetson SSH) -> 192.168.194.95:80
+let dvlTunnel:
+  | {
+      server: net.Server;
+      client: Client;
+      localPort: number;
+      dstHost: string;
+      dstPort: number;
+    }
+  | null = null;
+
+app.post(
+  "/api/rosbridge/start",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+
+    if (rosbridgeHandle) {
+      try {
+        rosbridgeHandle.stop();
+      } catch {}
+      rosbridgeHandle = null;
+    }
+
+    // Safety: if rosbridge is already running from a previous attempt, stop it first.
+    // This keeps the toggle simple and prevents "Address already in use" conflicts.
+    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`);
+    void execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
+
+    // Run EXACTLY like your manual terminal test:
+    // `cd /workspaces/mavlab && bash ./rosbridge.sh`
+    const remoteCmd = dockerRos2Interactive(`cd /workspaces/mavlab && bash ./rosbridge.sh`);
+
+    rosbridgeHandle = execStream(
+      t.ssh,
+      remoteCmd,
+      () => {},
+      (chunk) => {
+        // eslint-disable-next-line no-console
+        console.log(`[rosbridge start stderr] ${chunk.trim()}`);
+      },
+      () => {
+        rosbridgeHandle = null;
+      },
+      { pty: true, sendSigintOnStop: true, retries: 0 }
+    );
+
+    res.json({ code: 0, stdout: "rosbridge start requested" });
+  })
+);
+
+app.post(
+  "/api/dvl/tunnel/start",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+
+    if (dvlTunnel) {
+      res.json({ code: 0, stdout: `tunnel already running on http://localhost:${dvlTunnel.localPort}` });
+      return;
+    }
+
+    const localPort = 8080;
+    const dstHost = "192.168.194.95";
+    const dstPort = 80;
+
+    const client = new Client();
+    const server = net.createServer((sock) => {
+      client.forwardOut(
+        // source address/port are informational for the SSH server
+        sock.localAddress ?? "127.0.0.1",
+        sock.localPort ?? 0,
+        dstHost,
+        dstPort,
+        (err, stream) => {
+          if (err) {
+            try {
+              sock.destroy();
+            } catch {}
+            return;
+          }
+          sock.pipe(stream);
+          stream.pipe(sock);
+          sock.on("close", () => {
+            try {
+              stream.end();
+            } catch {}
+          });
+          stream.on("close", () => {
+            try {
+              sock.end();
+            } catch {}
+          });
+        }
+      );
+    });
+
+    const cleanup = () => {
+      if (!dvlTunnel) return;
+      const cur = dvlTunnel;
+      dvlTunnel = null;
+      try {
+        cur.server.close();
+      } catch {}
+      try {
+        cur.client.end();
+      } catch {}
+    };
+
+    client.on("error", cleanup);
+    client.on("close", cleanup);
+    server.on("error", (e) => {
+      cleanup();
+      throw e;
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      client.once("ready", resolve);
+      client.once("error", reject);
+      client.connect(t.ssh);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server.listen(localPort, "127.0.0.1", () => resolve());
+      server.once("error", reject);
+    });
+
+    dvlTunnel = { server, client, localPort, dstHost, dstPort };
+    res.json({ code: 0, stdout: `tunnel started: http://localhost:${localPort}` });
+  })
+);
+
+app.post(
+  "/api/sonarview/start",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+
+    // Launch SonarView AppImage on the Jetson host (NOT inside the docker container).
+    // Use the exact AppImage requested by the user.
+    // Run in background so the HTTP request returns immediately.
+    const cmd = bashLcInDir(
+      t.auvDir,
+      `APP="SonarView-arm64-1.13.14.AppImage"` +
+        `; if [ ! -f "$APP" ]; then echo "Missing $APP in ${t.auvDir}" >&2; exit 2; fi` +
+        `; chmod +x "$APP"` +
+        `; nohup "./$APP" >/tmp/sonarview.log 2>&1 & echo "launched: $APP (pid=$!)"`
+    );
+
+    const r = await execOnce(t.ssh, cmd);
+    if (r.code !== 0) {
+      res.status(500).json(r);
+      return;
+    }
+    res.json({ code: 0, stdout: r.stdout || "sonarview launch requested" });
+  })
+);
+
+app.post(
+  "/api/rosbridge/stop",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+
+    if (rosbridgeHandle) {
+      try {
+        rosbridgeHandle.stop();
+      } catch {}
+      rosbridgeHandle = null;
+    }
+
+    // Safety: ensure port 9090 is closed even if Ctrl+C doesn't fully stop all children.
+    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`);
+    void execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
+
+    res.json({ code: 0, stdout: "rosbridge stop requested" });
+  })
+);
+
 function withSudoPasswordIfAny(
   t: ReturnType<typeof getTarget>,
   cmdInAuvDir: string
@@ -175,6 +354,17 @@ function dockerRos2(cmd: string): string {
     " && if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi";
   const inner = `${prefix} && ${cmd}`;
   return `docker exec -u mavlab auv bash -lc "${inner.replaceAll('"', '\\"')}"`;
+}
+
+function dockerRos2Interactive(cmd: string): string {
+  // Same as dockerRos2, but allocates a TTY (-t). This makes Ctrl+C propagate more reliably
+  // to foreground processes started via execStream.
+  const prefix =
+    "source /opt/ros/humble/setup.bash" +
+    " && if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi" +
+    " && if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi";
+  const inner = `${prefix} && ${cmd}`;
+  return `docker exec -it -u mavlab auv bash -lc "${inner.replaceAll('"', '\\"')}"`;
 }
 
 app.post(
@@ -388,79 +578,7 @@ mrosWss.on("connection", (ws) => {
   ws.on("error", () => handle.stop());
 });
 
-// WebSocket: ws://localhost:8000/ws/rosbridge  (control rosbridge lifecycle)
-let rosbridgeStreamHandle: { stop: () => void } | null = null;
-let rosbridgeActiveWs: any = null;
-
-const rosbridgeCtrlWss = new WebSocketServer({ server, path: "/ws/rosbridge", perMessageDeflate: false });
-rosbridgeCtrlWss.on("connection", (ws) => {
-  const t = getTarget();
-
-  // Ensure only one rosbridge instance runs at a time.
-  if (rosbridgeStreamHandle) {
-    try {
-      rosbridgeStreamHandle.stop();
-    } catch {}
-    rosbridgeStreamHandle = null;
-  }
-  if (rosbridgeActiveWs && rosbridgeActiveWs.readyState === ws.OPEN) {
-    try {
-      rosbridgeActiveWs.close();
-    } catch {}
-  }
-  rosbridgeActiveWs = ws;
-
-  const remoteCmd = bashLcInDir(
-    t.auvDir,
-    dockerRos2(
-      // Start in the foreground (no nohup) so Ctrl+C can stop it.
-      // Also kill any stale rosbridge before launching.
-      `pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true; ` +
-        `cd /workspaces/mavlab && bash ./rosbridge.sh`
-    )
-  );
-
-  ws.send(JSON.stringify({ type: "status", message: "rosbridge starting..." }));
-
-  const handle = execStream(
-    t.ssh,
-    remoteCmd,
-    // We intentionally keep the UI clean; the toggle only needs lifecycle.
-    () => {},
-    (chunk) => {
-      // eslint-disable-next-line no-console
-      console.log(`[ws/rosbridge] ssh stderr: ${chunk.trim()}`);
-    },
-    (code) => {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({ type: "status", message: `rosbridge stopped (exit=${code ?? 0})` }));
-        try {
-          ws.close();
-        } catch {}
-      }
-      rosbridgeStreamHandle = null;
-      rosbridgeActiveWs = null;
-    },
-    { pty: true, sendSigintOnStop: true, retries: 0 }
-  );
-
-  rosbridgeStreamHandle = handle;
-
-  ws.on("close", () => {
-    try {
-      handle.stop();
-    } catch {}
-    if (rosbridgeStreamHandle === handle) rosbridgeStreamHandle = null;
-    if (rosbridgeActiveWs === ws) rosbridgeActiveWs = null;
-  });
-  ws.on("error", () => {
-    try {
-      handle.stop();
-    } catch {}
-    if (rosbridgeStreamHandle === handle) rosbridgeStreamHandle = null;
-    if (rosbridgeActiveWs === ws) rosbridgeActiveWs = null;
-  });
-});
+// rosbridge lifecycle is controlled by HTTP endpoints (`/api/rosbridge/start` and `/api/rosbridge/stop`).
 
 server.listen(cfg.BACKEND_PORT, () => {
   // eslint-disable-next-line no-console

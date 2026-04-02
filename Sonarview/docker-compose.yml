@@ -1,0 +1,21 @@
+services:
+  sonarview:
+    image: nicknothom/sonarview:latest
+    container_name: sonarview
+    network_mode: host
+    restart: unless-stopped
+
+    privileged: true 
+
+    volumes:
+      - /usr/SonarView:/userdata
+
+    devices:
+      - /dev:/dev 
+
+    group_add:
+      - dialout
+      - plugdev
+
+    environment:
+      - ENABLE_OS3D=false

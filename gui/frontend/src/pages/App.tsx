@@ -15,6 +15,7 @@ import {
   Alert,
   Tooltip,
   Switch,
+  Link,
 } from "@mui/material";
 // roslib has no bundled TS types in this setup
 import ROSLIB from "roslib";
@@ -78,7 +79,7 @@ export default function App() {
   const [plotTs, setPlotTs] = useState<number[]>([]);
 
   const [rosbridgeOn, setRosbridgeOn] = useState<boolean>(false);
-  const rosbridgeCtrlWsRef = useRef<WebSocket | null>(null);
+  // rosbridge toggle is controlled via HTTP endpoints.
 
   const [camTopic, setCamTopic] = useState<string>("");
   const [camImgUrl, setCamImgUrl] = useState<string>("");
@@ -88,6 +89,8 @@ export default function App() {
   const [modemTopics, setModemTopics] = useState<string[]>([]);
   const [modemTab, setModemTab] = useState(0);
   const [modemLogs, setModemLogs] = useState<Record<string, string>>({});
+  const [dvlUrl, setDvlUrl] = useState<string>("");
+  const [sonarViewLaunched, setSonarViewLaunched] = useState(false);
   const modemSubRef = useRef<Record<string, any>>({});
 
   const [echoText, setEchoText] = useState<string>("");
@@ -106,6 +109,7 @@ export default function App() {
   const teleRosRef = useRef<any | null>(null);
   const echoSubRef = useRef<any | null>(null);
   const plotSubRef = useRef<any | null>(null);
+  const rosbridgeReachableRef = useRef<boolean | null>(null);
 
   const filteredTopics = useMemo(() => {
     const q = topicFilter.trim();
@@ -455,26 +459,32 @@ export default function App() {
   }
 
   function startRosbridgeCtrl() {
-    // Close any previous control websocket first.
-    try {
-      rosbridgeCtrlWsRef.current?.close();
-    } catch {}
-    rosbridgeCtrlWsRef.current = null;
-
-    const ws = new WebSocket(`${wsBase}/ws/rosbridge`);
-    rosbridgeCtrlWsRef.current = ws;
-
-    ws.onopen = () => {};
-    ws.onclose = () => {
-      if (rosbridgeCtrlWsRef.current === ws) rosbridgeCtrlWsRef.current = null;
-    };
-    ws.onerror = () => {};
+    void (async () => {
+      const ok = await ensureBackendConnected();
+      if (!ok) {
+        setRosbridgeOn(false);
+        return;
+      }
+      try {
+        setBusy("/api/rosbridge/start");
+        await fetch(`${httpBase}/api/rosbridge/start`, { method: "POST" });
+      } catch {}
+      finally {
+        setBusy(null);
+      }
+    })();
   }
 
   function stopRosbridgeCtrl() {
-    const ws = rosbridgeCtrlWsRef.current;
-    rosbridgeCtrlWsRef.current = null;
-    if (ws) ws.close();
+    void (async () => {
+      try {
+        setBusy("/api/rosbridge/stop");
+        await fetch(`${httpBase}/api/rosbridge/stop`, { method: "POST" });
+      } catch {}
+      finally {
+        setBusy(null);
+      }
+    })();
   }
 
   function stopCamera() {
@@ -621,6 +631,43 @@ export default function App() {
     }
   }
 
+  async function startDvlTunnel() {
+    setBusy("/api/dvl/tunnel/start");
+    try {
+      const r = await fetch(`${httpBase}/api/dvl/tunnel/start`, { method: "POST" });
+      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string };
+      if (j.code !== 0) {
+        appendLog(`[/api/dvl/tunnel/start] exit=${j.code}\n${j.stderr ?? ""}\n\n`);
+        return;
+      }
+      const url = "http://localhost:8080";
+      setDvlUrl(url);
+      appendLog("[dvl] tunnel ready: http://localhost:8080\n\n");
+    } catch (e) {
+      appendLog(`[/api/dvl/tunnel/start] error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runSonarView() {
+    setBusy("/api/sonarview/start");
+    try {
+      const r = await fetch(`${httpBase}/api/sonarview/start`, { method: "POST" });
+      const j = (await r.json()) as { code: number; stdout?: string; stderr?: string };
+      if (j.code !== 0) {
+        appendLog(`[/api/sonarview/start] exit=${j.code}\n${j.stderr ?? ""}\n\n`);
+        return;
+      }
+      setSonarViewLaunched(true);
+      appendLog("[sonarview] launched on AUV\n\n");
+    } catch (e) {
+      appendLog(`[/api/sonarview/start] error: ${String(e)}\n\n`);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   useEffect(() => {
     const id = window.setInterval(async () => {
       try {
@@ -658,6 +705,21 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const reachable = status?.rosbridgeTcpMs !== null && status?.rosbridgeTcpMs !== undefined;
+    const prev = rosbridgeReachableRef.current;
+    if (prev === null) {
+      rosbridgeReachableRef.current = reachable;
+      return;
+    }
+    if (!prev && reachable) {
+      appendLog("[rosbridge] connected\n\n");
+    } else if (prev && !reachable) {
+      appendLog("[rosbridge] disconnected\n\n");
+    }
+    rosbridgeReachableRef.current = reachable;
+  }, [status?.rosbridgeTcpMs]);
+
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <AppBar position="static">
@@ -665,44 +727,62 @@ export default function App() {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             AUV Web GUI
           </Typography>
-          <Switch
-            checked={rosbridgeOn}
-            onChange={(_e, v) => {
-              void (async () => {
-                setRosbridgeOn(v);
-                if (v) {
-                  const ok = await ensureBackendConnected();
-                  if (!ok) {
-                    setRosbridgeOn(false);
-                    return;
-                  }
-                  startRosbridgeCtrl();
-                } else {
-                  stopRosbridgeCtrl();
-                }
-              })();
-            }}
+          <Box
             sx={{
-              "& .MuiSwitch-switchBase": { color: "error.main" },
-              "& .MuiSwitch-track": { backgroundColor: "error.main", opacity: 1 },
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color:
-                  status?.rosbridgeTcpMs !== null && status?.rosbridgeTcpMs !== undefined && status.rosbridgeTcpMs !== null
-                    ? "success.main"
-                    : "error.main"
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor:
-                  status?.rosbridgeTcpMs !== null && status?.rosbridgeTcpMs !== undefined && status.rosbridgeTcpMs !== null
-                    ? "success.main"
-                    : "error.main",
-                opacity: 1
-              }
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1.25,
+              py: 0.5,
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "rgba(255,255,255,0.04)",
             }}
-          />
-          <Typography variant="body2" sx={{ ml: 0.5 }}>
-            rosbridge
-          </Typography>
+          >
+            <Typography variant="body2" sx={{ fontWeight: 700, letterSpacing: 0.6 }}>
+              ROSBRIDGE
+            </Typography>
+            <Switch
+              checked={rosbridgeOn}
+              onChange={(_e, v) => {
+                void (async () => {
+                  setRosbridgeOn(v);
+                  if (v) {
+                    const ok = await ensureBackendConnected();
+                    if (!ok) {
+                      setRosbridgeOn(false);
+                      return;
+                    }
+                    startRosbridgeCtrl();
+                  } else {
+                    stopRosbridgeCtrl();
+                  }
+                })();
+              }}
+              sx={{
+                "& .MuiSwitch-switchBase": { color: "error.main" },
+                "& .MuiSwitch-track": { backgroundColor: "error.main", opacity: 1 },
+                "& .MuiSwitch-switchBase.Mui-checked": {
+                  color:
+                    status?.rosbridgeTcpMs !== null &&
+                    status?.rosbridgeTcpMs !== undefined &&
+                    status.rosbridgeTcpMs !== null
+                      ? "success.main"
+                      : "error.main"
+                },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor:
+                    status?.rosbridgeTcpMs !== null &&
+                    status?.rosbridgeTcpMs !== undefined &&
+                    status.rosbridgeTcpMs !== null
+                      ? "success.main"
+                      : "error.main",
+                  opacity: 1
+                }
+              }}
+            />
+          </Box>
           <Chip
             size="small"
             color={connected ? "success" : "default"}
@@ -956,6 +1036,7 @@ export default function App() {
             <Tab label="Echo" />
             <Tab label="Plot" />
             <Tab label="Cameras" />
+            <Tab label="SONARS" />
             <Tab label="Modem" />
           </Tabs>
           <Divider />
@@ -1093,6 +1174,61 @@ export default function App() {
           )}
 
           {rightTab === 3 && (
+            <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+              <Button
+                variant="contained"
+                disabled={!!busy}
+                onClick={startDvlTunnel}
+                sx={{
+                  width: "fit-content",
+                  bgcolor: "#ffeb3b",
+                  color: "rgba(0,0,0,0.87)",
+                  "&:hover": { bgcolor: "#fdd835" }
+                }}
+              >
+                VIEW DVL GUI
+              </Button>
+              {dvlUrl ? (
+                <Alert severity="success">
+                  You can view the DVL GUI at{" "}
+                  <Link href={dvlUrl} target="_blank" rel="noreferrer">
+                    {dvlUrl}
+                  </Link>
+                </Alert>
+              ) : (
+                <Alert severity="info">
+                  Press “VIEW DVL GUI” to expose the DVL UI on <b>http://localhost:8080</b>.
+                </Alert>
+              )}
+
+              <Divider />
+
+              <Button
+                variant="contained"
+                disabled={!!busy}
+                onClick={runSonarView}
+                sx={{
+                  width: "fit-content",
+                  bgcolor: "#ffeb3b",
+                  color: "rgba(0,0,0,0.87)",
+                  "&:hover": { bgcolor: "#fdd835" }
+                }}
+              >
+                RUN SONARVIEW
+              </Button>
+              {sonarViewLaunched ? (
+                <Alert severity="success">
+                  SonarView launched on AUV. Please open the SonarView Application on your system and enter the ip address to view the data.
+                </Alert>
+              ) : (
+                <Alert severity="info">
+                  Press “RUN SONARVIEW” to launch the SonarView AppImage on the Jetson (host).
+                </Alert>
+              )}
+            </Box>
+          )}
+
+          {rightTab === 4 && (
             <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
               <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                 <TextField
