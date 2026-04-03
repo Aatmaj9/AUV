@@ -716,6 +716,26 @@ app.get(
   })
 );
 
+app.delete(
+  "/api/rosbag/runs/:name",
+  asyncHandler(async (req, res) => {
+    const t = getTarget();
+    const c = t.containerName ?? "auv";
+    const runName = req.params.name.replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!runName) {
+      res.status(400).json({ code: 1, stderr: "invalid run name" });
+      return;
+    }
+    const cmd = `docker exec -u mavlab ${c} rm -rf /workspaces/mavlab/rosbags/${runName}`;
+    const r = await execOnce(t.ssh, cmd);
+    if (r.code !== 0) {
+      res.status(500).json(r);
+      return;
+    }
+    res.json({ code: 0, stdout: `deleted ${runName}` });
+  })
+);
+
 app.use(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

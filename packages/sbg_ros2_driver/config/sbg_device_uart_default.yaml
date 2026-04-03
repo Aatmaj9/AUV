@@ -251,7 +251,7 @@
 
       # Ros standard output:
       # Note: If true publish ROS standard messages.
-      ros_standard: false
+      ros_standard: true
 
       # Frame convention:
       # Note: If true messages are expressed in the ENU convention.

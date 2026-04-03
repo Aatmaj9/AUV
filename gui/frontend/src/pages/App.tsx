@@ -24,6 +24,7 @@ import {
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import CloseIcon from "@mui/icons-material/Close";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 // roslib has no bundled TS types in this setup
@@ -840,6 +841,25 @@ export default function App() {
       setSelectedRunMetadata("Failed to fetch metadata");
     } finally {
       setMetadataLoading(false);
+    }
+  }
+
+  async function deleteRosbagRun(name: string) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      const r = await fetch(`${httpBase}/api/rosbag/runs/${encodeURIComponent(name)}`, { method: "DELETE" });
+      if (r.ok) {
+        appendLog(`[rosbag] deleted ${name}\n\n`);
+        if (selectedRun === name) {
+          setSelectedRun(null);
+          setSelectedRunMetadata("");
+        }
+        fetchRosbagRuns();
+      } else {
+        appendLog(`[rosbag] failed to delete ${name}\n\n`);
+      }
+    } catch (e) {
+      appendLog(`[rosbag] error deleting ${name}: ${String(e)}\n\n`);
     }
   }
 
@@ -1711,24 +1731,33 @@ export default function App() {
                       rosbagRuns.map((run) => (
                         <Box
                           key={run}
-                          onClick={() => fetchRunMetadata(run)}
                           sx={{
                             display: "flex",
                             alignItems: "center",
                             gap: 1,
                             px: 1.5,
-                            py: 1,
+                            py: 0.5,
                             mb: 0.5,
                             borderRadius: 1,
-                            cursor: "pointer",
                             border: 1,
                             borderColor: "divider",
                             "&:hover": { bgcolor: "rgba(255,255,255,0.06)" },
                           }}
                         >
-                          <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 13 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontFamily: "monospace", fontSize: 13, flex: 1, cursor: "pointer" }}
+                            onClick={() => fetchRunMetadata(run)}
+                          >
                             📁 {run}
                           </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => { e.stopPropagation(); deleteRosbagRun(run); }}
+                            sx={{ color: "error.main", opacity: 0.7, "&:hover": { opacity: 1 } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </Box>
                       ))
                     )}
