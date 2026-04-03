@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { Box, Divider, Paper, Typography } from "@mui/material";
+import { Box, Divider, IconButton, Paper, Typography } from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import { TerminalPane } from "./TerminalPane";
 
 type CellId = "tl" | "tr" | "bl" | "br";
@@ -95,26 +96,52 @@ const vHandleSx = {
 const hPillSx = { width: 3, height: 40, borderRadius: 2, bgcolor: "divider", transition: "background-color 0.15s" } as const;
 const vPillSx = { height: 3, width: 40, borderRadius: 2, bgcolor: "divider", transition: "background-color 0.15s" } as const;
 
-function TermCell({ label, focused, onFocus, children }: { label: string; focused: boolean; onFocus: () => void; children: React.ReactNode }) {
+function TermCell({
+  label,
+  focused,
+  onFocus,
+  onRefresh,
+  children,
+}: {
+  label: string;
+  focused: boolean;
+  onFocus: () => void;
+  onRefresh: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <Paper
       onFocusCapture={onFocus}
       onPointerDown={onFocus}
       sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, minHeight: 0 }}
     >
-      <Typography
-        variant="subtitle2"
+      <Box
         sx={{
-          px: 2,
-          py: 0.5,
-          fontSize: "0.75rem",
+          px: 1,
+          py: 0.25,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
           bgcolor: focused ? "#c0392b" : "action.hover",
           color: focused ? "#fff" : "text.secondary",
           transition: "background-color 0.15s, color 0.15s",
         }}
       >
-        {label}
-      </Typography>
+        <Typography variant="subtitle2" sx={{ px: 1, fontSize: "0.75rem" }}>
+          {label}
+        </Typography>
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
+          sx={{ color: "inherit", p: 0.5 }}
+          title="Reconnect terminal"
+        >
+          <RefreshIcon sx={{ fontSize: 14 }} />
+        </IconButton>
+      </Box>
       <Divider />
       <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>{children}</Box>
     </Paper>
@@ -125,6 +152,16 @@ export function TerminalSplitPane({ visible, mounted, wsBase }: Props) {
   const hDrag = useHDrag(50);
   const vDrag = useVDrag(50);
   const [focusedCell, setFocusedCell] = useState<CellId>("tl");
+  const [refreshSeq, setRefreshSeq] = useState<Record<CellId, number>>({
+    tl: 0,
+    tr: 0,
+    bl: 0,
+    br: 0,
+  });
+
+  const refreshCell = (id: CellId) => {
+    setRefreshSeq((prev) => ({ ...prev, [id]: prev[id] + 1 }));
+  };
 
   return (
     <Box
@@ -144,16 +181,26 @@ export function TerminalSplitPane({ visible, mounted, wsBase }: Props) {
       {/* Top row */}
       <Box sx={{ flex: `0 0 calc(${vDrag.pct}% - 4px)`, display: "flex", overflow: "hidden" }}>
         <Box sx={{ flex: `0 0 calc(${hDrag.pct}% - 4px)`, display: "flex", overflow: "hidden" }}>
-          <TermCell label="Jetson" focused={focusedCell === "tl"} onFocus={() => setFocusedCell("tl")}>
-            {mounted && <TerminalPane mode="jetson" wsBase={wsBase} />}
+          <TermCell
+            label="Jetson"
+            focused={focusedCell === "tl"}
+            onFocus={() => setFocusedCell("tl")}
+            onRefresh={() => refreshCell("tl")}
+          >
+            {mounted && <TerminalPane key={`tl-${refreshSeq.tl}`} mode="jetson" wsBase={wsBase} />}
           </TermCell>
         </Box>
         <Box onPointerDown={hDrag.onPointerDown} sx={hHandleSx}>
           <Box sx={hPillSx} />
         </Box>
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <TermCell label="Docker" focused={focusedCell === "tr"} onFocus={() => setFocusedCell("tr")}>
-            {mounted && <TerminalPane mode="docker" wsBase={wsBase} />}
+          <TermCell
+            label="Docker"
+            focused={focusedCell === "tr"}
+            onFocus={() => setFocusedCell("tr")}
+            onRefresh={() => refreshCell("tr")}
+          >
+            {mounted && <TerminalPane key={`tr-${refreshSeq.tr}`} mode="docker" wsBase={wsBase} />}
           </TermCell>
         </Box>
       </Box>
@@ -166,16 +213,26 @@ export function TerminalSplitPane({ visible, mounted, wsBase }: Props) {
       {/* Bottom row */}
       <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <Box sx={{ flex: `0 0 calc(${hDrag.pct}% - 4px)`, display: "flex", overflow: "hidden" }}>
-          <TermCell label="Jetson" focused={focusedCell === "bl"} onFocus={() => setFocusedCell("bl")}>
-            {mounted && <TerminalPane mode="jetson" wsBase={wsBase} />}
+          <TermCell
+            label="Jetson"
+            focused={focusedCell === "bl"}
+            onFocus={() => setFocusedCell("bl")}
+            onRefresh={() => refreshCell("bl")}
+          >
+            {mounted && <TerminalPane key={`bl-${refreshSeq.bl}`} mode="jetson" wsBase={wsBase} />}
           </TermCell>
         </Box>
         <Box onPointerDown={hDrag.onPointerDown} sx={hHandleSx}>
           <Box sx={hPillSx} />
         </Box>
         <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <TermCell label="Docker" focused={focusedCell === "br"} onFocus={() => setFocusedCell("br")}>
-            {mounted && <TerminalPane mode="docker" wsBase={wsBase} />}
+          <TermCell
+            label="Docker"
+            focused={focusedCell === "br"}
+            onFocus={() => setFocusedCell("br")}
+            onRefresh={() => refreshCell("br")}
+          >
+            {mounted && <TerminalPane key={`br-${refreshSeq.br}`} mode="docker" wsBase={wsBase} />}
           </TermCell>
         </Box>
       </Box>

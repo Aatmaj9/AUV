@@ -255,8 +255,6 @@ app.get(
 );
 
 // rosbridge lifecycle controlled by HTTP (toggle start/stop).
-let rosbridgeHandle: { stop: () => void } | null = null;
-
 // DVL GUI tunnel (local port-forward): localhost:8080 -> (via Jetson SSH) -> 192.168.194.95:80
 let dvlTunnel:
   | {
@@ -273,37 +271,22 @@ app.post(
   asyncHandler(async (_req, res) => {
     const t = getTarget();
 
-    if (rosbridgeHandle) {
-      try {
-        rosbridgeHandle.stop();
-      } catch {}
-      rosbridgeHandle = null;
+    // Kill any existing rosbridge to avoid "Address already in use"
+    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`, t.containerName);
+    await execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
+
+    // Start rosbridge detached so it survives SSH disconnects
+    const startCmd = dockerRos2Detached(
+      `cd /workspaces/mavlab && bash ./rosbridge.sh`,
+      t.containerName
+    );
+    const r = await execOnce(t.ssh, bashLcInDir(t.auvDir, startCmd));
+    if (r.code !== 0) {
+      res.status(500).json(r);
+      return;
     }
 
-    // Safety: if rosbridge is already running from a previous attempt, stop it first.
-    // This keeps the toggle simple and prevents "Address already in use" conflicts.
-    const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`, t.containerName);
-    void execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
-
-    // Run EXACTLY like your manual terminal test:
-    // `cd /workspaces/mavlab && bash ./rosbridge.sh`
-    const remoteCmd = dockerRos2Interactive(`cd /workspaces/mavlab && bash ./rosbridge.sh`, t.containerName);
-
-    rosbridgeHandle = execStream(
-      t.ssh,
-      remoteCmd,
-      () => {},
-      (chunk) => {
-        // eslint-disable-next-line no-console
-        console.log(`[rosbridge start stderr] ${chunk.trim()}`);
-      },
-      () => {
-        rosbridgeHandle = null;
-      },
-      { pty: true, sendSigintOnStop: true, retries: 0 }
-    );
-
-    res.json({ code: 0, stdout: "rosbridge start requested" });
+    res.json({ code: 0, stdout: "rosbridge started (detached)" });
   })
 );
 
@@ -392,18 +375,10 @@ app.post(
   asyncHandler(async (_req, res) => {
     const t = getTarget();
 
-    if (rosbridgeHandle) {
-      try {
-        rosbridgeHandle.stop();
-      } catch {}
-      rosbridgeHandle = null;
-    }
-
-    // Safety: ensure port 9090 is closed even if Ctrl+C doesn't fully stop all children.
     const killCmd = dockerRos2(`pkill -f "rosbridge_server|rosbridge_websocket" >/dev/null 2>&1 || true`, t.containerName);
-    void execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
+    await execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
 
-    res.json({ code: 0, stdout: "rosbridge stop requested" });
+    res.json({ code: 0, stdout: "rosbridge stopped" });
   })
 );
 
@@ -483,7 +458,14 @@ app.post(
   "/api/devices/udev",
   asyncHandler(async (_req, res) => {
     const t = getTarget();
-    const cmd = withSudoPasswordIfAny(t, bashLcInDir(t.auvDir, "bash ./udev.sh"));
+    const inner = `cd ${shSingleQuote(t.auvDir)} && bash ./udev.sh`;
+    let cmd: string;
+    if (t.password) {
+      const pwEsc = String(t.password).replaceAll("\\", "\\\\").replaceAll("'", "'\"'\"'");
+      cmd = `printf '%s\\n' '${pwEsc}' | sudo -S -p '' bash -lc ${shSingleQuote(inner)}`;
+    } else {
+      cmd = `bash -lc ${shSingleQuote(inner)}`;
+    }
     const r = await execOnce(t.ssh, cmd);
     res.json(r);
   })
@@ -588,8 +570,35 @@ app.post(
 );
 
 // ── Rosbag recording ────────────────────────────────────────────────
-let rosbagHandle: { stop: () => void } | null = null;
-let rosbagRunIndex = 1;
+let rosbagRecording = false;
+let rosbagActiveName: string | null = null;
+
+async function nextRosbagRunName(t: ReturnType<typeof getTarget>): Promise<string> {
+  const c = t.containerName ?? "auv";
+  // Simple command: list rosbags dir, extract run numbers, find max
+  const cmd = `docker exec -u mavlab ${c} ls -1 /workspaces/mavlab/rosbags 2>/dev/null || true`;
+  const r = await execOnce(t.ssh, cmd).catch(() => ({ stdout: "" as string }));
+  const stdout = String((r as any).stdout ?? "");
+  let max = 0;
+  for (const line of stdout.split(/\r?\n/)) {
+    const m = line.trim().match(/^run(\d+)$/);
+    if (m) {
+      const n = Number(m[1]);
+      if (n > max) max = n;
+    }
+  }
+  return `run${max + 1}`;
+}
+
+function dockerRos2Detached(cmd: string, container: string | null = "auv"): string {
+  const c = container ?? "auv";
+  const prefix =
+    "source /opt/ros/humble/setup.bash" +
+    " && if [ -f /home/mavlab/ros2_ws/install/setup.bash ]; then source /home/mavlab/ros2_ws/install/setup.bash; fi" +
+    " && if [ -f /workspaces/mavlab/code_ws/install/setup.bash ]; then source /workspaces/mavlab/code_ws/install/setup.bash; fi";
+  const inner = `${prefix} && ${cmd}`;
+  return `docker exec -d -u mavlab ${c} bash -lc "${inner.replaceAll('"', '\\"')}"`;
+}
 
 const RosbagStartBody = z.object({
   topics: z.array(z.string().min(1)).min(1),
@@ -601,7 +610,7 @@ app.post(
     const t = getTarget();
     const body = RosbagStartBody.parse(req.body ?? {});
 
-    if (rosbagHandle) {
+    if (rosbagRecording) {
       res.status(409).json({ code: 1, stderr: "rosbag recording already running — stop it first" });
       return;
     }
@@ -613,27 +622,21 @@ app.post(
     await execOnce(t.ssh, mkdirCmd).catch(() => null);
 
     const topicList = body.topics.map((tp) => shSingleQuote(tp)).join(" ");
-    const bagName = `run${rosbagRunIndex}`;
-    const recordCmd = dockerRos2Interactive(
+    const bagName = await nextRosbagRunName(t);
+    const recordCmd = dockerRos2Detached(
       `ros2 bag record ${topicList} -o /workspaces/mavlab/rosbags/${bagName}`,
       t.containerName
     );
     const remoteCmd = bashLcInDir(t.auvDir, recordCmd);
 
-    rosbagHandle = execStream(
-      t.ssh,
-      remoteCmd,
-      () => {},
-      (chunk) => {
-        // eslint-disable-next-line no-console
-        console.log(`[rosbag stderr] ${chunk.trim()}`);
-      },
-      () => {
-        rosbagHandle = null;
-      },
-      { pty: true, sendSigintOnStop: true, retries: 0 }
-    );
+    const r = await execOnce(t.ssh, remoteCmd);
+    if (r.code !== 0) {
+      res.status(500).json(r);
+      return;
+    }
 
+    rosbagRecording = true;
+    rosbagActiveName = bagName;
     res.json({ code: 0, stdout: `recording started → rosbags/${bagName}`, bagName });
   })
 );
@@ -641,18 +644,75 @@ app.post(
 app.post(
   "/api/rosbag/stop",
   asyncHandler(async (_req, res) => {
-    if (!rosbagHandle) {
-      res.json({ code: 0, stdout: "no recording running" });
+    const t = getTarget();
+
+    // Send SIGINT for a clean rosbag shutdown inside the container
+    const killCmd = dockerRos2(
+      `pkill -INT -f "ros2.*bag.*record" >/dev/null 2>&1 || true`,
+      t.containerName
+    );
+    await execOnce(t.ssh, bashLcInDir(t.auvDir, killCmd)).catch(() => null);
+
+    rosbagRecording = false;
+    const stopped = rosbagActiveName;
+    rosbagActiveName = null;
+
+    res.json({ code: 0, stdout: "recording stopped", bagName: stopped });
+  })
+);
+
+app.get(
+  "/api/rosbag/status",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const cmd = dockerRos2(
+      `(pgrep -af "ros2.*bag.*record" 2>/dev/null | grep -vE "pgrep|bash -lc|docker exec" | grep -q . && echo running || echo stopped)`,
+      t.containerName
+    );
+    const r = await execOnce(t.ssh, bashLcInDir(t.auvDir, cmd)).catch(() => ({ stdout: "stopped" }));
+    const running = (r.stdout ?? "").trim() === "running";
+    rosbagRecording = running;
+    if (!running) rosbagActiveName = null;
+    res.json({ recording: running, bagName: rosbagActiveName });
+  })
+);
+
+// ── Previous rosbag runs ─────────────────────────────────────────────
+app.get(
+  "/api/rosbag/runs",
+  asyncHandler(async (_req, res) => {
+    const t = getTarget();
+    const c = t.containerName ?? "auv";
+    const cmd = `docker exec -u mavlab ${c} ls -1 /workspaces/mavlab/rosbags 2>/dev/null || true`;
+    const r = await execOnce(t.ssh, cmd).catch(() => ({ stdout: "" as string }));
+    const stdout = String((r as any).stdout ?? "");
+    const runs: string[] = [];
+    for (const line of stdout.split(/\r?\n/)) {
+      const name = line.trim();
+      if (name && /^run\d+$/.test(name)) runs.push(name);
+    }
+    runs.sort((a, b) => {
+      const na = Number(a.replace("run", ""));
+      const nb = Number(b.replace("run", ""));
+      return nb - na;
+    });
+    res.json({ runs });
+  })
+);
+
+app.get(
+  "/api/rosbag/runs/:name/metadata",
+  asyncHandler(async (req, res) => {
+    const t = getTarget();
+    const c = t.containerName ?? "auv";
+    const runName = req.params.name.replace(/[^a-zA-Z0-9_-]/g, "");
+    const cmd = `docker exec -u mavlab ${c} cat /workspaces/mavlab/rosbags/${runName}/metadata.yaml 2>&1`;
+    const r = await execOnce(t.ssh, cmd);
+    if (r.code !== 0) {
+      res.status(404).json({ code: r.code, stderr: r.stderr || r.stdout });
       return;
     }
-
-    try {
-      rosbagHandle.stop();
-    } catch {}
-    rosbagHandle = null;
-    rosbagRunIndex += 1;
-
-    res.json({ code: 0, stdout: "recording stopped" });
+    res.json({ metadata: r.stdout });
   })
 );
 

@@ -18,7 +18,14 @@ import {
   Link,
   Checkbox,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import CloseIcon from "@mui/icons-material/Close";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 // roslib has no bundled TS types in this setup
 import ROSLIB from "roslib";
 import { TerminalSplitPane } from "../components/TerminalSplitPane";
@@ -74,6 +81,7 @@ export default function App() {
   const [jetsonHost, setJetsonHost] = useState("192.168.1.162");
   const [jetsonPort, setJetsonPort] = useState("22");
   const [jetsonPassword, setJetsonPassword] = useState("");
+  const [showJetsonPassword, setShowJetsonPassword] = useState(false);
   const [jetsonAuvDir, setJetsonAuvDir] = useState("/home/timi/AUV");
   const [connTab, setConnTab] = useState(0);
   const [dockerRunning, setDockerRunning] = useState<boolean | null>(null);
@@ -108,6 +116,13 @@ export default function App() {
 
   const [rosbagChecked, setRosbagChecked] = useState<Record<string, boolean>>({});
   const [rosbagRecording, setRosbagRecording] = useState(false);
+  const [rosbagSelecting, setRosbagSelecting] = useState(false);
+  const [rosbagChecking, setRosbagChecking] = useState(false);
+  const [rosbagRuns, setRosbagRuns] = useState<string[]>([]);
+  const [rosbagRunsLoading, setRosbagRunsLoading] = useState(false);
+  const [selectedRun, setSelectedRun] = useState<string | null>(null);
+  const [selectedRunMetadata, setSelectedRunMetadata] = useState<string>("");
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const [echoText, setEchoText] = useState<string>("");
   const [logText, setLogText] = useState<string>("");
@@ -125,7 +140,7 @@ export default function App() {
   const teleRosRef = useRef<any | null>(null);
   const echoSubRef = useRef<any | null>(null);
   const plotSubRef = useRef<any | null>(null);
-  const rosbridgeReachableRef = useRef<boolean | null>(null);
+  // rosbridgeReachable is computed inline below
 
   const filteredTopics = useMemo(() => {
     const q = topicFilter.trim();
@@ -276,7 +291,7 @@ export default function App() {
       setDetectedContainer(j.containerName ?? null);
       appendLog(`[connect] ok: ${j.target ?? ""}${j.containerName ? ` (container: ${j.containerName})` : ""}\n\n`);
       // Auto-check docker status after connecting
-      setTimeout(() => fetchDockerStatus(), 500);
+      setTimeout(() => { fetchDockerStatus(); fetchRosbagStatus(); }, 500);
     } catch (e) {
       setConnected(false);
       setConnectedLabel("not connected");
@@ -515,8 +530,10 @@ export default function App() {
       try {
         setBusy("/api/rosbridge/start");
         await fetch(`${httpBase}/api/rosbridge/start`, { method: "POST" });
-      } catch {}
-      finally {
+        appendLog("[rosbridge] started\n\n");
+      } catch (e) {
+        appendLog(`[rosbridge] start error: ${String(e)}\n\n`);
+      } finally {
         setBusy(null);
       }
     })();
@@ -527,8 +544,10 @@ export default function App() {
       try {
         setBusy("/api/rosbridge/stop");
         await fetch(`${httpBase}/api/rosbridge/stop`, { method: "POST" });
-      } catch {}
-      finally {
+        appendLog("[rosbridge] killed\n\n");
+      } catch (e) {
+        appendLog(`[rosbridge] stop error: ${String(e)}\n\n`);
+      } finally {
         setBusy(null);
       }
     })();
@@ -772,6 +791,58 @@ export default function App() {
     }
   }
 
+  async function fetchRosbagStatus() {
+    setRosbagChecking(true);
+    try {
+      const r = await fetch(`${httpBase}/api/rosbag/status`);
+      if (!r.ok) {
+        setRosbagRecording(false);
+        return;
+      }
+      const j = (await r.json()) as { recording: boolean; bagName?: string | null };
+      setRosbagRecording(j.recording);
+      if (j.recording) setRosbagSelecting(false);
+    } catch (e) {
+      setRosbagRecording(false);
+    } finally {
+      setRosbagChecking(false);
+    }
+  }
+
+  async function fetchRosbagRuns() {
+    setRosbagRunsLoading(true);
+    try {
+      const r = await fetch(`${httpBase}/api/rosbag/runs`);
+      if (r.ok) {
+        const j = (await r.json()) as { runs: string[] };
+        setRosbagRuns(j.runs);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setRosbagRunsLoading(false);
+    }
+  }
+
+  async function fetchRunMetadata(name: string) {
+    setSelectedRun(name);
+    setSelectedRunMetadata("");
+    setMetadataLoading(true);
+    try {
+      const r = await fetch(`${httpBase}/api/rosbag/runs/${encodeURIComponent(name)}/metadata`);
+      if (r.ok) {
+        const j = (await r.json()) as { metadata: string };
+        setSelectedRunMetadata(j.metadata);
+      } else {
+        setSelectedRunMetadata("metadata.yaml not found");
+      }
+    } catch {
+      setSelectedRunMetadata("Failed to fetch metadata");
+    } finally {
+      setMetadataLoading(false);
+    }
+  }
+
   async function startRosbag() {
     const selected = topics.filter((t) => rosbagChecked[t]);
     if (selected.length === 0) {
@@ -791,6 +862,7 @@ export default function App() {
         return;
       }
       setRosbagRecording(true);
+      setRosbagSelecting(false);
       appendLog(`[rosbag] data collection started → ${j.bagName ?? "rosbags/"}\n\n`);
     } catch (e) {
       appendLog(`[rosbag] error: ${String(e)}\n\n`);
@@ -803,9 +875,11 @@ export default function App() {
     setBusy("/api/rosbag/stop");
     try {
       const r = await fetch(`${httpBase}/api/rosbag/stop`, { method: "POST" });
-      const j = (await r.json()) as { code: number; stdout?: string };
+      const j = (await r.json()) as { code: number; stdout?: string; bagName?: string | null };
       setRosbagRecording(false);
-      appendLog(`[rosbag] data collection stopped\n\n`);
+      setRosbagSelecting(false);
+      appendLog(`[rosbag] data collection stopped → ${j.bagName ?? "run?"}\n\n`);
+      fetchRosbagRuns();
     } catch (e) {
       appendLog(`[rosbag] error: ${String(e)}\n\n`);
     } finally {
@@ -851,19 +925,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const reachable = status?.rosbridgeTcpMs !== null && status?.rosbridgeTcpMs !== undefined;
-    const prev = rosbridgeReachableRef.current;
-    if (prev === null) {
-      rosbridgeReachableRef.current = reachable;
-      return;
+    if (topTab === 1 && rightTab === 5) {
+      fetchRosbagStatus();
+      fetchRosbagRuns();
+      setSelectedRun(null);
+      setSelectedRunMetadata("");
     }
-    if (!prev && reachable) {
-      appendLog("[rosbridge] connected\n\n");
-    } else if (prev && !reachable) {
-      appendLog("[rosbridge] disconnected\n\n");
-    }
-    rosbridgeReachableRef.current = reachable;
-  }, [status?.rosbridgeTcpMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topTab, rightTab]);
+
+  const rosbridgeReachable = status?.rosbridgeTcpMs !== null && status?.rosbridgeTcpMs !== undefined;
 
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
@@ -872,98 +943,49 @@ export default function App() {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             AUV Web GUI
           </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              px: 1.25,
-              py: 0.5,
-              borderRadius: 2,
-              border: "1px solid",
-              borderColor: "divider",
-              bgcolor: "rgba(255,255,255,0.04)",
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 700, letterSpacing: 0.6 }}>
-              ROSBRIDGE
-            </Typography>
+          {topTab === 1 && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.25, py: 0.5, borderRadius: 2, border: "1px solid", borderColor: "divider", bgcolor: "rgba(255,255,255,0.04)" }}>
+            <Typography variant="body2" sx={{ fontWeight: 700, letterSpacing: 0.6 }}>ROSBRIDGE</Typography>
             <Switch
+              size="small"
               checked={rosbridgeOn}
               onChange={(_e, v) => {
                 void (async () => {
                   setRosbridgeOn(v);
-                  if (v) {
-                    const ok = await ensureBackendConnected();
-                    if (!ok) {
-                      setRosbridgeOn(false);
-                      return;
-                    }
-                    startRosbridgeCtrl();
-                  } else {
-                    stopRosbridgeCtrl();
-                  }
+                  if (v) { startRosbridgeCtrl(); } else { stopRosbridgeCtrl(); }
                 })();
               }}
               sx={{
-                "& .MuiSwitch-switchBase": { color: "error.main" },
-                "& .MuiSwitch-track": { backgroundColor: "error.main", opacity: 1 },
-                "& .MuiSwitch-switchBase.Mui-checked": {
-                  color:
-                    status?.rosbridgeTcpMs !== null &&
-                    status?.rosbridgeTcpMs !== undefined &&
-                    status.rosbridgeTcpMs !== null
-                      ? "success.main"
-                      : "error.main"
-                },
-                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                  backgroundColor:
-                    status?.rosbridgeTcpMs !== null &&
-                    status?.rosbridgeTcpMs !== undefined &&
-                    status.rosbridgeTcpMs !== null
-                      ? "success.main"
-                      : "error.main",
-                  opacity: 1
-                }
+                "& .MuiSwitch-switchBase.Mui-checked": { color: "info.main" },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "info.main", opacity: 1 }
               }}
             />
-          </Box>
-          <Chip
-            size="small"
-            color={connected ? "success" : "default"}
-            label={connected ? `Connected: ${connectedLabel}` : "Not connected"}
-            variant={connected ? "filled" : "outlined"}
-          />
-          <Tooltip
-            title={
-              status
-                ? `SSH TCP: ${status.sshTcpMs ?? "—"} ms`
-                : "No status yet"
-            }
-          >
             <Chip
               size="small"
-              color={
-                !status
-                  ? "default"
-                  : !status.ok
-                  ? "error"
-                  : status.sshTcpMs !== null && status.sshTcpMs < 80
-                  ? "success"
-                  : status.sshTcpMs !== null && status.sshTcpMs < 200
-                  ? "warning"
-                  : "error"
-              }
               variant="outlined"
-              label={
-                !status
-                  ? "Link: —"
-                  : !status.ok
-                  ? "Link: down"
-                  : `Link: ${status.sshTcpMs ?? "—"} ms`
-              }
+              color={rosbridgeReachable ? "success" : "error"}
+              label={rosbridgeReachable
+                ? `Link: ${status?.rosbridgeTcpMs ?? "\u2014"} ms`
+                : "Link: down"}
             />
-          </Tooltip>
+          </Box>
+          )}
+          <Chip
+            size="small"
+            variant="outlined"
+            color={
+              !status ? "default"
+                : !status.ok ? "error"
+                : status.sshTcpMs !== null && status.sshTcpMs < 80 ? "success"
+                : status.sshTcpMs !== null && status.sshTcpMs < 200 ? "warning"
+                : "error"
+            }
+            label={
+              !status ? "Link: \u2014"
+                : !status.ok ? "Link: down"
+                : `Link: ${status.sshTcpMs ?? "\u2014"} ms`
+            }
+          />
         </Toolbar>
         <Tabs value={topTab} onChange={(_e, v) => setTopTab(v)} textColor="inherit">
           <Tab label="Connection" />
@@ -1009,9 +1031,23 @@ export default function App() {
               <TextField
                 size="small"
                 label="Password"
-                type="password"
+                type={showJetsonPassword ? "text" : "password"}
                 value={jetsonPassword}
                 onChange={(e) => setJetsonPassword(e.target.value)}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={() => setShowJetsonPassword((v) => !v)}
+                        aria-label={showJetsonPassword ? "Hide password" : "Show password"}
+                      >
+                        {showJetsonPassword ? <Visibility fontSize="small" /> : <VisibilityOff fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
                 fullWidth
               />
               <TextField
@@ -1027,9 +1063,13 @@ export default function App() {
                 Connect
               </Button>
             </Box>
-            <Typography variant="body2" sx={{ opacity: 0.8 }}>
-              After you see &quot;Connected&quot;, go to the SENSORS tab.
-            </Typography>
+            {connected ? (
+              <Alert severity="success">Connected successfully to &quot;{jetsonUser}&quot;.</Alert>
+            ) : (
+              <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                Enter credentials and click Connect.
+              </Typography>
+            )}
             </Box>
             )}
             {connTab === 1 && (
@@ -1514,73 +1554,185 @@ export default function App() {
           )}
 
           {rightTab === 5 && (
-            <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1, overflow: "auto", flex: 1 }}>
-              <Typography variant="subtitle2">Select topics to record:</Typography>
-              <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => {
-                    const all: Record<string, boolean> = {};
-                    topics.forEach((t) => { all[t] = true; });
-                    setRosbagChecked(all);
-                  }}
-                >
-                  Select All
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => setRosbagChecked({})}
-                >
-                  Deselect All
-                </Button>
-              </Box>
-              <Box sx={{ flex: 1, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1, p: 1 }}>
-                {topics.length === 0 ? (
-                  <Typography variant="body2" sx={{ opacity: 0.6 }}>
-                    No topics available — fetch topics from the Devices tab first.
-                  </Typography>
+            <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+              {/* ── Left half: Record controls ── */}
+              <Box sx={{ flex: 1, p: 2, display: "flex", flexDirection: "column", gap: 1, overflow: "auto", borderRight: 1, borderColor: "divider" }}>
+                <Typography variant="h6">Record Data</Typography>
+
+                {rosbagChecking ? (
+                  <Alert severity="info">Checking for any running ros2 bag record...</Alert>
+                ) : rosbagRecording ? (
+                  <>
+                    <Alert severity="warning">
+                      <strong>Record already running.</strong> Click Stop to end the current recording.
+                    </Alert>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button variant="contained" color="error" disabled={!!busy} onClick={stopRosbag}>
+                        Stop Recording
+                      </Button>
+                      <Button variant="outlined" disabled={!!busy} onClick={fetchRosbagStatus}>
+                        Refresh Status
+                      </Button>
+                    </Box>
+                  </>
+                ) : !rosbagSelecting ? (
+                  <>
+                    <Alert severity="info">No recording is running.</Alert>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        disabled={!!busy}
+                        onClick={() => {
+                          setRosbagSelecting(true);
+                          setRosbagChecked({});
+                        }}
+                      >
+                        Start a New Record
+                      </Button>
+                      <Button variant="outlined" disabled={!!busy} onClick={fetchRosbagStatus}>
+                        Refresh Status
+                      </Button>
+                    </Box>
+                  </>
                 ) : (
-                  topics.map((t) => (
-                    <FormControlLabel
-                      key={t}
-                      sx={{ display: "flex", ml: 0, mr: 0 }}
-                      control={
-                        <Checkbox
-                          size="small"
-                          checked={!!rosbagChecked[t]}
-                          onChange={(e) =>
-                            setRosbagChecked((prev) => ({ ...prev, [t]: e.target.checked }))
-                          }
-                        />
-                      }
-                      label={<Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 12 }}>{t}</Typography>}
-                    />
-                  ))
+                  <>
+                    <Typography variant="subtitle2">Select topics to record:</Typography>
+                    <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          const all: Record<string, boolean> = {};
+                          topics.forEach((t) => {
+                            all[t] = true;
+                          });
+                          setRosbagChecked(all);
+                        }}
+                      >
+                        Select All
+                      </Button>
+                      <Button size="small" variant="outlined" onClick={() => setRosbagChecked({})}>
+                        Deselect All
+                      </Button>
+                      <Box sx={{ flex: 1 }} />
+                      <Button size="small" variant="text" disabled={!!busy} onClick={() => setRosbagSelecting(false)}>
+                        Cancel
+                      </Button>
+                    </Box>
+                    <Box sx={{ flex: 1, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1, p: 1 }}>
+                      {topics.length === 0 ? (
+                        <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                          No topics available — fetch topics from the Devices tab first.
+                        </Typography>
+                      ) : (
+                        topics.map((t) => (
+                          <FormControlLabel
+                            key={t}
+                            sx={{ display: "flex", ml: 0, mr: 0 }}
+                            control={
+                              <Checkbox
+                                size="small"
+                                checked={!!rosbagChecked[t]}
+                                onChange={(e) => setRosbagChecked((prev) => ({ ...prev, [t]: e.target.checked }))}
+                              />
+                            }
+                            label={
+                              <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 12 }}>
+                                {t}
+                              </Typography>
+                            }
+                          />
+                        ))
+                      )}
+                    </Box>
+                    <Box sx={{ display: "flex", gap: 1, pt: 1 }}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        disabled={!!busy || topics.filter((t) => rosbagChecked[t]).length === 0}
+                        onClick={startRosbag}
+                      >
+                        Start Recording
+                      </Button>
+                    </Box>
+                  </>
                 )}
               </Box>
-              <Box sx={{ display: "flex", gap: 1, pt: 1 }}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  disabled={!!busy || rosbagRecording || topics.filter((t) => rosbagChecked[t]).length === 0}
-                  onClick={startRosbag}
-                >
-                  Start Record
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  disabled={!!busy || !rosbagRecording}
-                  onClick={stopRosbag}
-                >
-                  Stop Record
-                </Button>
-                {rosbagRecording && (
-                  <Typography variant="body2" sx={{ alignSelf: "center", color: "success.main", fontWeight: 600 }}>
-                    ● Recording...
-                  </Typography>
+
+              {/* ── Right half: Previous Records ── */}
+              <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <Box sx={{ px: 2, pt: 2, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="h6" sx={{ flex: 1 }}>Previous Records</Typography>
+                  <Button size="small" variant="outlined" disabled={rosbagRunsLoading} onClick={fetchRosbagRuns}>
+                    Refresh
+                  </Button>
+                </Box>
+
+                {selectedRun ? (
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", px: 2, pb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontFamily: "monospace", flex: 1 }}>
+                        {selectedRun}/metadata.yaml
+                      </Typography>
+                      <IconButton size="small" onClick={() => { setSelectedRun(null); setSelectedRunMetadata(""); }}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        overflow: "auto",
+                        borderRadius: 1,
+                        "& pre": { margin: "0 !important", minHeight: "100%" },
+                      }}
+                    >
+                      {metadataLoading ? (
+                        <Typography variant="body2" sx={{ opacity: 0.6, p: 1.5 }}>Loading metadata...</Typography>
+                      ) : (
+                        <SyntaxHighlighter
+                          language="yaml"
+                          style={vscDarkPlus}
+                          showLineNumbers
+                          wrapLongLines
+                          customStyle={{ fontSize: 12, borderRadius: 4 }}
+                        >
+                          {selectedRunMetadata}
+                        </SyntaxHighlighter>
+                      )}
+                    </Box>
+                  </Box>
+                ) : (
+                  <Box sx={{ flex: 1, overflow: "auto", px: 2, pb: 2 }}>
+                    {rosbagRunsLoading ? (
+                      <Typography variant="body2" sx={{ opacity: 0.6 }}>Loading runs...</Typography>
+                    ) : rosbagRuns.length === 0 ? (
+                      <Typography variant="body2" sx={{ opacity: 0.6 }}>No previous recordings found.</Typography>
+                    ) : (
+                      rosbagRuns.map((run) => (
+                        <Box
+                          key={run}
+                          onClick={() => fetchRunMetadata(run)}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            px: 1.5,
+                            py: 1,
+                            mb: 0.5,
+                            borderRadius: 1,
+                            cursor: "pointer",
+                            border: 1,
+                            borderColor: "divider",
+                            "&:hover": { bgcolor: "rgba(255,255,255,0.06)" },
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 13 }}>
+                            📁 {run}
+                          </Typography>
+                        </Box>
+                      ))
+                    )}
+                  </Box>
                 )}
               </Box>
             </Box>
