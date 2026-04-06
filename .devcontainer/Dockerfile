@@ -61,6 +61,7 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-pointcloud-to-laserscan \
       ros-humble-laser-filters \
       ros-humble-v4l2-camera \
+      ros-humble-rmw-cyclonedds-cpp \
  && ln -sf /usr/bin/python3 /usr/bin/python \
  && chmod -R a+rX /usr/local/lib/python3.10/dist-packages /usr/lib/python3/dist-packages \
  && rm -rf /var/lib/apt/lists/*

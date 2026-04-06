@@ -2,7 +2,10 @@
   <Domain>
     <General>
       <!-- Pin DDS to the Wi‑Fi extender interface to avoid multi-NIC discovery flakiness. -->
-      <NetworkInterfaceAddress>wlx8c902d14c273</NetworkInterfaceAddress>
+      <!-- NetworkInterfaceAddress is deprecated in CycloneDDS 0.10.x; use Interfaces/NetworkInterface. -->
+      <Interfaces>
+        <NetworkInterface name="wlx8c902d14c273" />
+      </Interfaces>
     </General>
   </Domain>
 </CycloneDDS>
