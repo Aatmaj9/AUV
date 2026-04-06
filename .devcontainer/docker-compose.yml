@@ -47,3 +47,24 @@ services:
       - /dev:/dev
       - /dev/bus/usb:/dev/bus/usb
       - /tmp/argus_socket:/tmp/argus_socket
+
+  # Run rosbridge persistently (avoid GUI pkill/start churn).
+  rosbridge:
+    image: aatmaj9/timi:1.0
+    restart: unless-stopped
+    container_name: auv_rosbridge
+    working_dir: /workspaces/mavlab
+    user: "mavlab"
+    privileged: true
+    network_mode: host
+    ipc: host
+    pid: host
+    stdin_open: true
+    tty: true
+    environment:
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///workspaces/mavlab/.devcontainer/cyclonedds.xml
+    volumes:
+      - ..:/workspaces/mavlab
+    command: bash -lc "ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
