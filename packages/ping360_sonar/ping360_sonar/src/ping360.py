@@ -33,8 +33,8 @@ class Ping360_node(Node):
             'speed_of_sound': [1500,1000,2000],
             'range_max': [2,1,50],
             'publish_image': True,
-            'publish_scan': False,
-            'publish_echo': False}
+            'publish_scan': True,
+            'publish_echo': True}
         
         for name, value in parameters.items():
             if type(value) not in (list, tuple):

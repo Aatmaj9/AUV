@@ -1,0 +1,9 @@
+<CycloneDDS>
+  <Domain>
+    <General>
+      <!-- Pin DDS to the Wi‑Fi extender interface to avoid multi-NIC discovery flakiness. -->
+      <NetworkInterfaceAddress>wlx8c902d14c273</NetworkInterfaceAddress>
+    </General>
+  </Domain>
+</CycloneDDS>
+

@@ -54,6 +54,7 @@ RUN apt-get update && apt-get install -y software-properties-common \
       ros-humble-laser-filters \
       ros-humble-v4l2-camera \
       ros-humble-camera-calibration \
+      ros-humble-rmw-cyclonedds-cpp \
  && ln -sf /usr/bin/python3 /usr/bin/python \
  && rm -rf /var/lib/apt/lists/*
 
