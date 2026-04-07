@@ -1,12 +1,20 @@
-<CycloneDDS>
-  <Domain>
+<?xml version="1.0" encoding="UTF-8" ?>
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain Id="any">
     <General>
       <!-- Pin DDS to the Wi‑Fi extender interface to avoid multi-NIC discovery flakiness. -->
-      <!-- NetworkInterfaceAddress is deprecated in CycloneDDS 0.10.x; use Interfaces/NetworkInterface. -->
       <Interfaces>
         <NetworkInterface name="wlx8c902d14c273" />
       </Interfaces>
+      <AllowMulticast>default</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
     </General>
+    <Internal>
+      <SocketReceiveBufferSize min="10MB"/>
+      <Watermarks>
+        <WhcHigh>500kB</WhcHigh>
+      </Watermarks>
+    </Internal>
   </Domain>
 </CycloneDDS>
 

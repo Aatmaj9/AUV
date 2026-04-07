@@ -75,3 +75,23 @@ sudo usermod -aG dialout $USER
 
 ```
 ssh -L 8080:192.168.194.95:80 timi@192.168.1.162
+```
+
+Tuning for large messages for Cyclone DDS
+All DDS implementations are not designed to handle large messages (such as images or point clouds). Therefore, it is necessary to tune them and the network parameters to prevent data loss and system overloading.
+
+For making it permanent -
+
+sudo nano /etc/sysctl.d/60-auv-ros2-buffers.conf
+
+net.ipv4.ipfrag_time=3
+net.ipv4.ipfrag_high_thresh=134217728
+net.core.rmem_max=2147483647
+
+sudo sysctl -p /etc/sysctl.d/60-auv-ros2-buffers.conf
+
+For temporary - 
+
+sudo sysctl -w net.ipv4.ipfrag_time=3
+sudo sysctl -w net.ipv4.ipfrag_high_thresh=134217728
+sudo sysctl -w net.core.rmem_max=2147483647
