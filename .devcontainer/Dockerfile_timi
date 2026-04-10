@@ -159,6 +159,7 @@ RUN echo "alias sbg='sros2 && ros2 launch sbg_driver sbg_device_launch.py'" >> /
  && echo "alias ping2='sros2 && ros2 run ping_sonar_ros ping1d_node --ros-args -p port:=/dev/ping2'" >> /home/${USERNAME}/.bashrc \
  && echo "alias frontcam='sros2 && sleep 2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/front -p video_device:=/dev/frontcam -p image_size:=[640,480] -p framerate:=10 -p pixel_format:=yuyv'" >> /home/${USERNAME}/.bashrc \
  && echo "alias bottomcam='sros2 && sleep 2 && ros2 run v4l2_camera v4l2_camera_node --ros-args -r __ns:=/bottom -p video_device:=/dev/bottomcam -p image_size:=[640,480] -p framerate:=10 -p pixel_format:=yuyv'" >> /home/${USERNAME}/.bashrc \
- && echo "alias modem='sros2 && scode && ros2 run modem_m64 modem_node --ros-args -r __ns:=/auv -p role:=b -p port:=/dev/modem'" >> /home/${USERNAME}/.bashrc
+ && echo "alias modem='sros2 && scode && ros2 run modem_m64 modem_node --ros-args -r __ns:=/auv -p role:=b -p port:=/dev/modem'" >> /home/${USERNAME}/.bashrc \
+ && echo "alias bar30='scode && ros2 run arduino_ps arduino_ps'" >> /home/${USERNAME}/.bashrc
 # -------------------- Expose Ports --------------------
 EXPOSE 9000 9001 9002 9003
