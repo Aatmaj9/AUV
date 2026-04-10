@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile_timi
     container_name: auv
     working_dir: /workspaces/mavlab
     user: "mavlab"

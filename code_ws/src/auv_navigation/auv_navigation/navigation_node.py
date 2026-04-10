@@ -1,0 +1,475 @@
+#!/usr/bin/env python3
+"""Kinematic EKF for the AUV using SBG and DVL topics from packages/ (see package.xml description)."""
+
+import numpy as np
+import rclpy
+from dvl_msgs.msg import DVL, DVLDR
+from geometry_msgs.msg import Quaternion
+from nav_msgs.msg import Odometry
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+from sensor_msgs.msg import Imu, JointState, Range
+from std_msgs.msg import Float32, Float64MultiArray
+
+from auv_navigation.ekf import EKF
+from auv_navigation.kinematics import eul_to_quat, eul_to_rotm, quat_to_eul, quat_to_rotm
+from auv_navigation.kin_kf import (
+    depth_mat,
+    depth_model,
+    dvl_body_mat,
+    dvl_body_model,
+    encoders_mat,
+    encoder_model,
+    gnss_mat,
+    gnss_model,
+    imu_mat,
+    imu_model,
+    plant_model,
+    range_to_bottom_mat,
+    range_to_bottom_model,
+    state_mats,
+)
+from auv_navigation.read_config import read_vessel_data
+
+
+def calculate_threshold(dt, n_actuators):
+    th = np.full(15 + n_actuators, np.inf)
+    omg_der_var = 1.0**2
+    acc_der_var = 1.0**2
+    cov = np.diag([1, 1, 1, 1, 1, 1])
+    cov[0:3, 0:3] = omg_der_var * np.eye(3)
+    cov[3:6, 3:6] = acc_der_var * np.eye(3)
+    th[2] = 0.0
+    return th, cov
+
+
+def _joint_values_ordered(msg: JointState, names, field: str):
+    arr = getattr(msg, field)
+    return np.array([arr[msg.name.index(n)] for n in names])
+
+
+def _imu_covariance_9x9(msg: Imu, sensor: dict) -> np.ndarray:
+    if sensor.get("use_custom_covariance"):
+        cc = sensor["custom_covariance"]
+        R = np.zeros((9, 9))
+        R[0:3, 0:3] = np.array(cc["orientation_covariance"]).reshape(3, 3)
+        R[3:6, 3:6] = np.array(cc["angular_velocity_covariance"]).reshape(3, 3)
+        R[6:9, 6:9] = np.array(cc["linear_acceleration_covariance"]).reshape(3, 3)
+        return R
+    R = np.zeros((9, 9))
+    for block, src, key, default_v in [
+        (slice(0, 3), msg.orientation_covariance, "default_orientation_variance", 0.05),
+        (slice(3, 6), msg.angular_velocity_covariance, "default_gyro_variance", 0.02),
+        (slice(6, 9), msg.linear_acceleration_covariance, "default_accel_variance", 0.1),
+    ]:
+        arr = np.array(src)
+        if len(arr) >= 9 and arr[0] >= 0:
+            R[block, block] = arr.reshape(3, 3)
+        else:
+            v = float(sensor.get(key, default_v))
+            R[block, block] = np.eye(3) * v
+    return R
+
+
+class Navigation(Node):
+    def __init__(self, vessel, ekf, th=None, apply_prefix=False, vessel_file=None):
+        super().__init__("auv_navigation")
+
+        self.vessel = vessel
+        try:
+            assert "agents" in self.vessel and len(self.vessel["agents"]) > 0
+            assert "id" in self.vessel["agents"][0]
+            assert "name" in self.vessel["agents"][0]
+            assert "sensors" in self.vessel["agents"][0]
+            assert len(self.vessel["agents"][0]["sensors"]) > 0
+        except AssertionError as e:
+            self.get_logger().error(f"Vessel configuration error: {e}")
+            raise
+
+        self.vessel_id = vessel["agents"][0]["id"]
+        self.vessel_name = vessel["agents"][0]["name"]
+
+        if apply_prefix:
+            try:
+                self.topic_prefix = vessel["agents"][0]["prefix"]
+            except Exception:
+                self.topic_prefix = None
+            if self.topic_prefix is None or str(self.topic_prefix).strip() == "":
+                self.topic_prefix = f"{self.vessel_name}_{self.vessel_id:02d}"
+            self.get_logger().info(f"Topic prefix: {self.topic_prefix}")
+        else:
+            self.topic_prefix = ""
+
+        self.ekf = ekf
+        self.first_imu_flag = True
+        self.first_pos_flag = True
+
+        self.seabed_z_ned = vessel.get("seabed_z_ned")
+        self._has_ping_range = any(
+            s.get("sensor_type") == "PING_RANGE" for s in self.vessel["agents"][0]["sensors"]
+        )
+        if self._has_ping_range and self.seabed_z_ned is None:
+            raise ValueError(
+                "vessel_data.yml: seabed_z_ned is required when using sensor_type PING_RANGE "
+                "(NED z of flat seabed, positive down from the same origin as vehicle z)."
+            )
+        if self.seabed_z_ned is not None:
+            self.get_logger().info(f"Flat seabed NED z (constant): seabed_z_ned = {self.seabed_z_ned} m")
+
+        for sensor in self.vessel["agents"][0]["sensors"]:
+            st = sensor["sensor_type"]
+            topic = self._sensor_topic(sensor, apply_prefix)
+
+            if st == "IMU":
+
+                def imu_cb(msg, s=sensor):
+                    self.imu_callback(msg, s)
+
+                self.create_subscription(Imu, topic, imu_cb, 10)
+
+            elif st == "DVL":
+                # dvl_msgs/DVL — same as Water Linked node publishes on /dvl/data
+
+                def dvl_msg_cb(msg, s=sensor):
+                    self.dvl_a50_callback(msg, s)
+
+                self.create_subscription(DVL, topic, dvl_msg_cb, 10)
+
+            elif st == "DVL_DR":
+                # dvl_msgs/DVLDR — /dvl/position (local dead-reckoned position, metres)
+
+                def dr_cb(msg, s=sensor):
+                    self.dvl_dr_callback(msg, s)
+
+                self.create_subscription(DVLDR, topic, dr_cb, 10)
+
+            elif st == "encoders":
+                field = sensor.get("value_field", "position")
+
+                def enc_cb(msg, s=sensor, f=field):
+                    self.encoders_callback(msg, s, f)
+
+                self.create_subscription(JointState, topic, enc_cb, 10)
+
+            elif st == "ARDUINO_DEPTH":
+                # std_msgs/Float32 depth in metres (arduino_ps /auv/depth)
+
+                def ad_cb(msg, s=sensor):
+                    self.arduino_depth_callback(msg, s)
+
+                self.create_subscription(Float32, topic, ad_cb, 10)
+
+            elif st == "PING_RANGE":
+                # Ping sonar / echosounder: sensor_msgs/Range (e.g. packages/ping_sonar_ros /ping1d/range)
+
+                def ping_cb(msg, s=sensor):
+                    self.ping_range_callback(msg, s)
+
+                self.create_subscription(Range, topic, ping_cb, 10)
+
+            else:
+                self.get_logger().warn(f"Unknown sensor_type '{st}', skipping.")
+
+        odom_name = vessel["agents"][0].get("odometry_topic", "navigation/odometry")
+        state_name = vessel["agents"][0].get("state_topic", "navigation/state")
+        if apply_prefix:
+            self.odom_topic = f"/{self.topic_prefix}/{odom_name}"
+            self.state_topic = f"/{self.topic_prefix}/{state_name}"
+        else:
+            self.odom_topic = odom_name if odom_name.startswith("/") else f"/{odom_name}"
+            self.state_topic = state_name if state_name.startswith("/") else f"/{state_name}"
+
+        self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
+        self.state_pub = self.create_publisher(Float64MultiArray, self.state_topic, 10)
+
+        self.create_timer(float(self.vessel["time_step"]), self.update_odometry)
+
+        self.dt = float(self.vessel["time_step"])
+        self.th = th
+        if vessel_file:
+            self.get_logger().info(f"Vessel data file: {vessel_file}")
+        self.get_logger().info(f"Publishing odometry: {self.odom_topic}")
+
+    def _sensor_topic(self, sensor, apply_prefix):
+        if "sensor_topic" not in sensor:
+            defaults = {
+                "IMU": "/imu/data",
+                "DVL": "/dvl/data",
+                "DVL_DR": "/dvl/position",
+                "encoders": "/actuator_feedback",
+                "ARDUINO_DEPTH": "/auv/depth",
+                "PING_RANGE": "/ping1d/range",
+            }
+            rel = defaults.get(sensor["sensor_type"], "/sensor")
+        else:
+            rel = sensor["sensor_topic"]
+        if not apply_prefix:
+            return rel if rel.startswith("/") else f"/{rel}"
+        if rel.startswith("/"):
+            return f"/{self.topic_prefix}{rel}"
+        return f"/{self.topic_prefix}/{rel}"
+
+    def encoders_callback(self, msg, sensor, field: str):
+        names = sensor["actuator_names"]
+        y_encoders = _joint_values_ordered(msg, names, field)[:, np.newaxis]
+        var = sensor.get("default_variance", [0.01] * len(names))
+        R_encoders = np.diag(var)
+        Cd_encoders = encoders_mat(self.ekf.x[:, 0])
+        self.ekf.correct(
+            y_encoders,
+            Cd_encoders,
+            R_encoders,
+            meas_model=lambda x: encoder_model(x),
+            threshold=self.th,
+            imu_ssa=False,
+        )
+
+    def imu_callback(self, msg, sensor):
+        imu_quat = np.array([msg.orientation.w, msg.orientation.x, msg.orientation.y, msg.orientation.z])
+        imu_eul = quat_to_eul(imu_quat)
+        imu_acc = np.array(
+            [msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z]
+        )
+        imu_omg = np.array(
+            [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
+        )
+        imu_acc = imu_acc - quat_to_rotm(imu_quat).T @ np.array([0, 0, -9.81])
+        y_imu = np.concatenate((imu_eul, imu_omg, imu_acc))[:, np.newaxis]
+
+        r_bs_b = np.array(sensor["sensor_location"])
+        Theta_bs = np.array(sensor["sensor_orientation"]) * np.pi / 180.0
+        R_imu = _imu_covariance_9x9(msg, sensor)
+        Cd_imu = imu_mat(self.ekf.x[:, 0], r_bs_b=r_bs_b, Theta_bs=Theta_bs)
+
+        if self.first_pos_flag or self.first_imu_flag:
+            self.ekf.x[3:6] = y_imu[0:3]
+            self.ekf.x[9:12] = y_imu[3:6]
+            self.ekf.x[12:15] = y_imu[6:9]
+            if self.first_imu_flag:
+                self.first_imu_flag = False
+        else:
+            self.ekf.correct(
+                y_imu,
+                Cd_imu,
+                R_imu,
+                meas_model=lambda x: imu_model(x, r_bs_b=r_bs_b, Theta_bs=Theta_bs),
+                threshold=self.th,
+                imu_ssa=True,
+            )
+
+    def dvl_a50_callback(self, msg: DVL, sensor: dict):
+        if not msg.velocity_valid:
+            return
+        y = np.array([[msg.velocity.x], [msg.velocity.y], [msg.velocity.z]])
+        r_bs_b = np.array(sensor["sensor_location"])
+        Theta_bs = np.array(sensor["sensor_orientation"]) * np.pi / 180.0
+        if len(msg.covariance) >= 9:
+            R = np.array(msg.covariance, dtype=float).reshape(3, 3)
+        elif sensor.get("use_custom_covariance"):
+            R = np.array(sensor["custom_covariance"]["velocity_covariance"]).reshape(3, 3)
+        else:
+            v = float(sensor.get("default_velocity_variance", 0.05))
+            fom_scale = float(sensor.get("fom_variance_scale", 0.0))
+            if fom_scale > 0.0 and msg.fom > 0.0:
+                v = max(v, fom_scale * float(msg.fom) ** 2)
+            R = np.eye(3) * v
+        Cd = dvl_body_mat(self.ekf.x[:, 0], r_bs_b=r_bs_b, Theta_bs=Theta_bs)
+        self.ekf.correct(
+            y,
+            Cd,
+            R,
+            meas_model=lambda x: dvl_body_model(x, r_bs_b=r_bs_b, Theta_bs=Theta_bs),
+            threshold=self.th,
+            imu_ssa=False,
+        )
+
+    def dvl_dr_callback(self, msg: DVLDR, sensor: dict):
+        """Treat DVL DR position as local NED position (metres); align mission origin with DVL reset."""
+        y = np.array([[msg.position.x], [msg.position.y], [msg.position.z]])
+        r_bs_b = np.array(sensor["sensor_location"])
+        Theta_bs = np.array(sensor["sensor_orientation"]) * np.pi / 180.0
+        std = float(msg.pos_std)
+        base = max(std**2, float(sensor.get("min_position_variance", 1e-4)))
+        # >1.0 inflates R → lower Kalman gain (less trust in DVL DR position; DR drifts)
+        scale = float(sensor.get("position_variance_scale", 1.0))
+        scale = max(scale, 1e-6)
+        R = np.eye(3) * (base * scale)
+        if sensor.get("use_custom_covariance"):
+            R = np.array(sensor["custom_covariance"]["position_covariance"]).reshape(3, 3)
+        Cd = gnss_mat(self.ekf.x[:, 0], r_bs_b=r_bs_b, Theta_bs=Theta_bs)
+        if self.first_pos_flag or self.first_imu_flag:
+            self.ekf.x[0:3] = y
+            self.first_pos_flag = False
+        else:
+            self.ekf.correct(
+                y,
+                Cd,
+                R,
+                meas_model=lambda x: gnss_model(x, r_bs_b=r_bs_b, Theta_bs=Theta_bs),
+                threshold=self.th,
+                imu_ssa=False,
+            )
+
+    def _depth_measurement_update(self, depth_metres: float, sensor: dict):
+        """Fuse scalar depth (m) into NED z using depth_model / lever arm (Arduino / Float32 path)."""
+        if not np.isfinite(depth_metres):
+            return
+        sign_scale = float(sensor.get("sign_scale", 1.0))
+        z_off = float(sensor.get("z_offset", 0.0))
+        y = np.array([[sign_scale * depth_metres + z_off]])
+        r_bs_b = np.array(sensor["sensor_location"])
+        Theta_bs = np.array(sensor["sensor_orientation"]) * np.pi / 180.0
+        var = float(sensor.get("default_variance", 0.05))
+        R = np.array([[var]])
+        Cd = depth_mat(self.ekf.x[:, 0], r_bs_b=r_bs_b, Theta_bs=Theta_bs)
+        if self.first_pos_flag or self.first_imu_flag:
+            self.ekf.x[2, 0] = float(y[0, 0])
+            if self.first_pos_flag:
+                self.first_pos_flag = False
+        else:
+            self.ekf.correct(
+                y,
+                Cd,
+                R,
+                meas_model=lambda x: depth_model(x, r_bs_b=r_bs_b, Theta_bs=Theta_bs),
+                threshold=self.th,
+                imu_ssa=False,
+            )
+
+    def arduino_depth_callback(self, msg: Float32, sensor: dict):
+        """arduino_ps publishes depth in metres on /auv/depth (same quantity after Arduino's conversion)."""
+        d = float(msg.data)
+        if not np.isfinite(d):
+            return
+        self._depth_measurement_update(d, sensor)
+
+    def ping_range_callback(self, msg: Range, sensor: dict):
+        """Fuse altimeter range using flat seabed at vessel seabed_z_ned (or per-sensor seabed_z_ned)."""
+        r = float(msg.range)
+        if not np.isfinite(r) or not (float(msg.min_range) <= r <= float(msg.max_range)):
+            return
+        z_sb = float(sensor.get("seabed_z_ned", self.seabed_z_ned))
+        r_bs_b = np.array(sensor["sensor_location"])
+        Theta_bs = np.array(sensor["sensor_orientation"]) * np.pi / 180.0
+        y = np.array([[r]])
+        var = float(sensor.get("default_variance", 0.04))
+        R = np.array([[var]])
+        Cd = range_to_bottom_mat(self.ekf.x[:, 0], z_sb, r_bs_b=r_bs_b, Theta_bs=Theta_bs)
+
+        if self.first_pos_flag or self.first_imu_flag:
+            R_nb = eul_to_rotm(
+                np.array([self.ekf.x[3, 0], self.ekf.x[4, 0], self.ekf.x[5, 0]])
+            )
+            z_sensor = z_sb - r
+            z_body = z_sensor - (R_nb @ r_bs_b)[2]
+            self.ekf.x[2, 0] = float(z_body)
+            if self.first_pos_flag:
+                self.first_pos_flag = False
+        else:
+            self.ekf.correct(
+                y,
+                Cd,
+                R,
+                meas_model=lambda x, zs=z_sb, rb=r_bs_b, th=Theta_bs: range_to_bottom_model(
+                    x, zs, r_bs_b=rb, Theta_bs=th
+                ),
+                threshold=self.th,
+                imu_ssa=False,
+            )
+
+    def update_odometry(self):
+        u = np.zeros(self.ekf.n_inp)
+        Amat, Emat = state_mats(self.ekf.x.flatten())
+        self.ekf.predict(
+            u=u,
+            A=Amat,
+            B=None,
+            E=Emat,
+            plant_model=plant_model,
+            discrete_flag=False,
+            threshold=self.th,
+        )
+
+        odom_msg = Odometry()
+        odom_msg.header.stamp = self.get_clock().now().to_msg()
+        odom_msg.header.frame_id = "NED"
+        odom_msg.child_frame_id = "BODY"
+        odom_msg.pose.pose.position.x = float(self.ekf.x[0, 0])
+        odom_msg.pose.pose.position.y = float(self.ekf.x[1, 0])
+        odom_msg.pose.pose.position.z = float(self.ekf.x[2, 0])
+        quat = eul_to_quat(np.array([self.ekf.x[3, 0], self.ekf.x[4, 0], self.ekf.x[5, 0]]))
+        odom_msg.pose.pose.orientation = Quaternion(x=quat[1], y=quat[2], z=quat[3], w=quat[0])
+        pose_cov = np.zeros(36).reshape(6, 6)
+        pose_cov[0:3, 0:3] = self.ekf.P[0:3, 0:3]
+        pose_cov[3:6, 3:6] = self.ekf.P[3:6, 3:6]
+        odom_msg.pose.covariance = pose_cov.flatten()
+        odom_msg.twist.twist.linear.x = float(self.ekf.x[6, 0])
+        odom_msg.twist.twist.linear.y = float(self.ekf.x[7, 0])
+        odom_msg.twist.twist.linear.z = float(self.ekf.x[8, 0])
+        odom_msg.twist.twist.angular.x = float(self.ekf.x[9, 0])
+        odom_msg.twist.twist.angular.y = float(self.ekf.x[10, 0])
+        odom_msg.twist.twist.angular.z = float(self.ekf.x[11, 0])
+        twist_cov = np.zeros(36).reshape(6, 6)
+        twist_cov[0:3, 0:3] = self.ekf.P[6:9, 6:9]
+        twist_cov[3:6, 3:6] = self.ekf.P[9:12, 9:12]
+        odom_msg.twist.covariance = twist_cov.flatten()
+        self.odom_pub.publish(odom_msg)
+
+        state_msg = Float64MultiArray()
+        state_msg.data = self.ekf.x.flatten().tolist()
+        self.state_pub.publish(state_msg)
+
+
+def main():
+    rclpy.init()
+    loader = rclpy.create_node("auv_nav_config_loader")
+    loader.declare_parameter("vessel_data_file", "")
+    vf = loader.get_parameter("vessel_data_file").get_parameter_value().string_value
+    loader.destroy_node()
+
+    path = vf.strip() if vf else None
+    vessel = read_vessel_data(path)
+
+    sampling_rate = 1.0 / float(vessel["time_step"])
+    dt = float(vessel["time_step"])
+
+    try:
+        thrusters = vessel["agents"][0]["thrusters"]
+        if thrusters in (None, "None", "none"):
+            thrusters = None
+    except Exception:
+        thrusters = None
+    try:
+        control_surfaces = vessel["agents"][0].get("control_surfaces")
+        if control_surfaces in (None, "None", "none"):
+            control_surfaces = None
+    except Exception:
+        control_surfaces = None
+
+    n_thrusters = len(thrusters) if thrusters else 0
+    n_surfaces = len(control_surfaces) if control_surfaces else 0
+    n_actuators = n_thrusters + n_surfaces
+
+    th, cov = calculate_threshold(dt, n_actuators)
+    ekf = EKF(sampling_rate, n_states=15 + n_actuators, n_inp=n_actuators, pro_noise_cov=cov)
+
+    executor = MultiThreadedExecutor()
+    apply_prefix = vessel["agents"][0].get("apply_prefix", False)
+    nav = Navigation(
+        vessel,
+        ekf,
+        th=th,
+        apply_prefix=apply_prefix,
+        vessel_file=path,
+    )
+    executor.add_node(nav)
+    try:
+        executor.spin()
+    finally:
+        executor.shutdown()
+        nav.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
