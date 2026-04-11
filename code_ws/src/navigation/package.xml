@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>navigation</name>
+  <version>0.1.0</version>
+  <description>
+    AUV kinematic navigation with an Extended Kalman filter: same sensor/topic contract as auv_navigation
+    (Imu, dvl_msgs/DVL, DVLDR, optional JointState encoders, Float32 depth, sensor_msgs/Range altimeter).
+    Filter core uses numerically stable updates (solve-based gain, Joseph covariance), optional Mahalanobis
+    gating, and Jacobians built with central differences / compact analytic blocks instead of the
+    reference EKF hand-derived matrices.
+  </description>
+  <maintainer email="na22b018@smail.iitm.ac.in">aatmaj</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>dvl_msgs</depend>
+  <depend>python3-numpy</depend>
+  <depend>python3-scipy</depend>
+  <depend>python3-yaml</depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
