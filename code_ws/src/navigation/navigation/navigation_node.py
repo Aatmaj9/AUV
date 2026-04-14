@@ -10,6 +10,7 @@ from geometry_msgs.msg import Quaternion
 from nav_msgs.msg import Odometry
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from sbg_driver.msg import SbgEkfQuat, SbgImuData
 from sensor_msgs.msg import Imu, JointState, Range
 from std_msgs.msg import Float32, Float64MultiArray
 
@@ -107,6 +108,10 @@ class NavigationFilterNode(Node):
         self._imu_init_yaw = None
         self._dvl_dr_R_to_ned = None
         self._dvl_dr_origin = None
+        self._dvl_dr_initialized = False
+
+        self._sbg_latest_quat = None
+        self._sbg_quat_lock = threading.Lock()
 
         g = vessel.get("mahalanobis_gate")
         if g is None or g is False or (isinstance(g, str) and g.strip().lower() in ("", "none", "false")):
@@ -136,6 +141,28 @@ class NavigationFilterNode(Node):
                     self.imu_callback(msg, s)
 
                 self.create_subscription(Imu, topic, imu_cb, 10)
+
+            elif st == "IMU_SBG":
+                quat_topic = sensor.get("quat_topic", "/sbg/ekf_quat")
+                if apply_prefix:
+                    if quat_topic.startswith("/"):
+                        quat_topic = f"/{self.topic_prefix}{quat_topic}"
+                    else:
+                        quat_topic = f"/{self.topic_prefix}/{quat_topic}"
+
+                def sbg_quat_cb(msg):
+                    with self._sbg_quat_lock:
+                        self._sbg_latest_quat = msg
+
+                self.create_subscription(SbgEkfQuat, quat_topic, sbg_quat_cb, 10)
+
+                def sbg_imu_cb(msg, s=sensor):
+                    self.sbg_imu_callback(msg, s)
+
+                self.create_subscription(SbgImuData, topic, sbg_imu_cb, 10)
+                self.get_logger().info(
+                    f"IMU_SBG: imu_data={topic}, ekf_quat={quat_topic}"
+                )
 
             elif st == "DVL":
 
@@ -200,6 +227,7 @@ class NavigationFilterNode(Node):
         if "sensor_topic" not in sensor:
             defaults = {
                 "IMU": "/imu/data",
+                "IMU_SBG": "/sbg/imu_data",
                 "DVL": "/dvl/data",
                 "DVL_DR": "/dvl/position",
                 "encoders": "/actuator_feedback",
@@ -276,6 +304,71 @@ class NavigationFilterNode(Node):
                     mahalanobis_gate=self.mahalanobis_gate,
                 )
 
+    def sbg_imu_callback(self, msg: SbgImuData, sensor: dict):
+        with self._sbg_quat_lock:
+            quat_msg = self._sbg_latest_quat
+        if quat_msg is None:
+            return
+
+        q = quat_msg.quaternion
+        imu_quat = np.array([q.w, q.x, q.y, q.z])
+        imu_eul = quat_to_eul(imu_quat)
+
+        imu_omg = np.array([msg.gyro.x, msg.gyro.y, msg.gyro.z])
+        imu_acc = np.array([msg.accel.x, msg.accel.y, msg.accel.z])
+        imu_acc = imu_acc - quat_to_rotm(imu_quat).T @ np.array([0, 0, -9.81])
+
+        y_imu = np.concatenate((imu_eul, imu_omg, imu_acc))[:, np.newaxis]
+
+        r_bs_b = np.array(sensor["sensor_location"])
+        Theta_bs = np.array(sensor["sensor_orientation"])
+        R_imu = self._sbg_imu_covariance(quat_msg, sensor)
+
+        with self._ekf_lock:
+            xv = self.ekf.x.flatten()
+            H = jacobian_imu_numerical(xv, r_bs_b, Theta_bs, self.n_state)
+
+            if self.first_pos_flag or self.first_imu_flag:
+                self.ekf.x[3:6] = y_imu[0:3]
+                self.ekf.x[9:12] = y_imu[3:6]
+                self.ekf.x[12:15] = y_imu[6:9]
+                if self.first_imu_flag:
+                    self._imu_init_yaw = float(imu_eul[2])
+                    self.get_logger().info(
+                        f"SBG IMU init yaw (NED): {np.degrees(self._imu_init_yaw):.1f} deg"
+                    )
+                    self.first_imu_flag = False
+            else:
+                h_x = predict_imu(xv, r_bs_b, Theta_bs).reshape(-1, 1)
+                self.ekf.update(
+                    y_imu,
+                    H,
+                    R_imu,
+                    h_x,
+                    threshold=self.th,
+                    imu_ssa=True,
+                    mahalanobis_gate=self.mahalanobis_gate,
+                )
+
+    @staticmethod
+    def _sbg_imu_covariance(quat_msg: SbgEkfQuat, sensor: dict) -> np.ndarray:
+        if sensor.get("use_custom_covariance"):
+            cc = sensor["custom_covariance"]
+            R = np.zeros((9, 9))
+            R[0:3, 0:3] = np.array(cc["orientation_covariance"]).reshape(3, 3)
+            R[3:6, 3:6] = np.array(cc["angular_velocity_covariance"]).reshape(3, 3)
+            R[6:9, 6:9] = np.array(cc["linear_acceleration_covariance"]).reshape(3, 3)
+            return R
+        R = np.zeros((9, 9))
+        acc = quat_msg.accuracy
+        ori_var = np.array([acc.x, acc.y, acc.z]) ** 2
+        R[0:3, 0:3] = np.diag(ori_var)
+        gyro_var = float(sensor.get("default_gyro_variance", 0.02))
+        R[3:6, 3:6] = np.eye(3) * gyro_var
+        accel_var = float(sensor.get("default_accel_variance", 0.1))
+        R[6:9, 6:9] = np.eye(3) * accel_var
+        return R
+
     def dvl_a50_callback(self, msg: DVL, sensor: dict):
         if not msg.velocity_valid:
             return
@@ -326,27 +419,32 @@ class NavigationFilterNode(Node):
             R = np.array(sensor["custom_covariance"]["position_covariance"]).reshape(3, 3)
 
         with self._ekf_lock:
-            if self.first_pos_flag or self.first_imu_flag:
+            if not self._dvl_dr_initialized:
                 self._dvl_dr_origin = y_raw.copy()
+                dvl_yaw = float(msg.yaw) * (np.pi / 180.0)
                 if self._imu_init_yaw is not None:
-                    psi = self._imu_init_yaw
-                    c, s = np.cos(psi), np.sin(psi)
+                    delta_psi = self._imu_init_yaw - dvl_yaw
+                    c, s = np.cos(delta_psi), np.sin(delta_psi)
                     self._dvl_dr_R_to_ned = np.array([
                         [ c, -s,  0.0],
                         [ s,  c,  0.0],
                         [0.0, 0.0, 1.0],
                     ])
                     self.get_logger().info(
-                        f"DVL DR frame aligned to NED: yaw offset = {np.degrees(psi):.1f} deg"
+                        f"DVL DR→NED: IMU yaw={np.degrees(self._imu_init_yaw):.1f}°, "
+                        f"DVL yaw={np.degrees(dvl_yaw):.1f}°, "
+                        f"delta={np.degrees(delta_psi):.1f}°"
                     )
                 else:
                     self._dvl_dr_R_to_ned = np.eye(3)
                     self.get_logger().warn(
-                        "DVL DR received before IMU init; assuming DVL frame = NED (no rotation)."
+                        "DVL DR received before IMU init; assuming DVL NED = global NED (no rotation)."
                     )
+                self._dvl_dr_initialized = True
                 y_ned = self._dvl_dr_to_ned(y_raw)
                 self.ekf.x[0:3] = y_ned.reshape(3, 1)
-                self.first_pos_flag = False
+                if self.first_pos_flag:
+                    self.first_pos_flag = False
             else:
                 y_ned = self._dvl_dr_to_ned(y_raw)
                 y = y_ned.reshape(3, 1)

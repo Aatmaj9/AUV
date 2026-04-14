@@ -21,10 +21,14 @@ agents:
     thrusters: null
     control_surfaces: null
     sensors:
-      - sensor_type: IMU
-        sensor_topic: /imu/data
+      # IMU_SBG: uses SBG native NED topics (sbg_ros2_driver with use_enu: false)
+      - sensor_type: IMU_SBG
+        sensor_topic: /sbg/imu_data
+        quat_topic: /sbg/ekf_quat
         sensor_location: [0.3591, 0.0, 0.0]
         sensor_orientation: [0.0, 0.0, 0.0]
+        default_gyro_variance: 0.02
+        default_accel_variance: 0.1
       - sensor_type: ARDUINO_DEPTH
         sensor_topic: /auv/depth
         sensor_location: [-0.371978, 0.0, 0.360633]
