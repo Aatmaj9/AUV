@@ -34,9 +34,13 @@ class PointTrackingMission2D(Node):
         self.declare_parameter("waypoints_y", [0.0, 0.0, 1.0, 1.0])
 
         self.declare_parameter("acceptance_radius", 0.35)
-        self.declare_parameter("max_speed", 0.35)
-        self.declare_parameter("min_speed", 0.05)
-        self.declare_parameter("k_dist", 0.5)
+        self.declare_parameter("u_cruise", 0.25)
+        self.declare_parameter("u_min", 0.05)
+        self.declare_parameter("u_max", 0.35)
+        self.declare_parameter("lookahead", 0.8)
+        self.declare_parameter("ilos_ki", 0.05)
+        self.declare_parameter("ilos_int_limit", 2.0)
+        self.declare_parameter("switch_alongtrack_margin", 0.1)
 
         odom_topic = str(self.get_parameter("odom_topic").value)
         reference_topic = str(self.get_parameter("reference_topic").value)
@@ -46,10 +50,12 @@ class PointTrackingMission2D(Node):
         ys = list(self.get_parameter("waypoints_y").value)
         self._waypoints = normalize_waypoints(xs, ys)
         self._idx = 0
-        self._done = len(self._waypoints) == 0
+        self._done = len(self._waypoints) < 2
 
         self._x: Optional[float] = None
         self._y: Optional[float] = None
+        self._z_ilos: float = 0.0
+        self._last_t = self.get_clock().now()
 
         self._ref_pub = self.create_publisher(Float64MultiArray, reference_topic, 10)
         self._status_pub = self.create_publisher(String, status_topic, 10)
@@ -83,37 +89,74 @@ class PointTrackingMission2D(Node):
             self._publish_status("point_tracking_2d: completed")
             return
 
+        now = self.get_clock().now()
+        dt = (now - self._last_t).nanoseconds * 1e-9
+        self._last_t = now
+        if dt <= 0.0 or dt > 0.5:
+            dt = 0.1
+
         acceptance = float(self.get_parameter("acceptance_radius").value)
-        max_speed = float(self.get_parameter("max_speed").value)
-        min_speed = float(self.get_parameter("min_speed").value)
-        k_dist = float(self.get_parameter("k_dist").value)
+        u_cruise = float(self.get_parameter("u_cruise").value)
+        u_min = float(self.get_parameter("u_min").value)
+        u_max = float(self.get_parameter("u_max").value)
+        lookahead = float(self.get_parameter("lookahead").value)
+        ilos_ki = float(self.get_parameter("ilos_ki").value)
+        ilos_int_limit = float(self.get_parameter("ilos_int_limit").value)
+        switch_margin = float(self.get_parameter("switch_alongtrack_margin").value)
 
-        tx, ty = self._waypoints[self._idx]
-        dx = tx - self._x
-        dy = ty - self._y
-        dist = math.hypot(dx, dy)
+        # Segment LOS/ILOS guidance over waypoint legs Wi -> Wi+1.
+        i0 = self._idx
+        i1 = i0 + 1
+        if i1 >= len(self._waypoints):
+            self._done = True
+            self._publish_reference(0.0, 0.0, 0.0)
+            self._publish_status("point_tracking_2d: completed")
+            return
 
-        if dist <= acceptance:
+        x0, y0 = self._waypoints[i0]
+        x1, y1 = self._waypoints[i1]
+        seg_dx = x1 - x0
+        seg_dy = y1 - y0
+        seg_len = math.hypot(seg_dx, seg_dy)
+        if seg_len < 1e-6:
             self._idx += 1
-            if self._idx >= len(self._waypoints):
-                self._done = True
-                self._publish_reference(0.0, 0.0, 0.0)
-                self._publish_status("point_tracking_2d: completed")
-                self.get_logger().info("point_tracking_mission_2d completed.")
-                return
-            tx, ty = self._waypoints[self._idx]
-            dx = tx - self._x
-            dy = ty - self._y
-            dist = math.hypot(dx, dy)
+            return
 
-        psi_d = math.atan2(dy, dx)
-        u_d = max(min_speed, min(max_speed, k_dist * dist))
+        tx = seg_dx / seg_len
+        ty = seg_dy / seg_len
+        rx = self._x - x0
+        ry = self._y - y0
+        e_x = tx * rx + ty * ry
+        e_y = -ty * rx + tx * ry
+
+        # Advance segment when we have reached near the end along-track.
+        if e_x >= seg_len - switch_margin:
+            self._idx += 1
+            if self._idx >= len(self._waypoints) - 1:
+                # Final waypoint completion check.
+                xf, yf = self._waypoints[-1]
+                if math.hypot(xf - self._x, yf - self._y) <= acceptance:
+                    self._done = True
+                    self._publish_reference(0.0, 0.0, 0.0)
+                    self._publish_status("point_tracking_2d: completed")
+                    self.get_logger().info("point_tracking_mission_2d completed.")
+                return
+            # Reset ILOS integrator mildly at leg switch for cleaner transitions.
+            self._z_ilos *= 0.5
+            return
+
+        self._z_ilos += e_y * dt
+        self._z_ilos = max(-ilos_int_limit, min(ilos_int_limit, self._z_ilos))
+
+        chi_path = math.atan2(seg_dy, seg_dx)
+        psi_d = chi_path - math.atan2(e_y + ilos_ki * self._z_ilos, max(1e-3, lookahead))
+        u_d = max(u_min, min(u_max, u_cruise))
         v_d = 0.0
 
         self._publish_reference(u_d, v_d, psi_d)
         self._publish_status(
-            f"point_tracking_2d: wp={self._idx + 1}/{len(self._waypoints)} "
-            f"target=({tx:.2f},{ty:.2f}) dist={dist:.2f}"
+            f"point_tracking_2d: leg={i0 + 1}->{i1 + 1}/{len(self._waypoints)} "
+            f"cross_track={e_y:.2f}m lookahead={lookahead:.2f}m"
         )
 
 

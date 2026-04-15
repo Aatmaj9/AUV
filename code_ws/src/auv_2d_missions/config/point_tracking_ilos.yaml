@@ -1,0 +1,24 @@
+point_tracking_mission_2d:
+  ros__parameters:
+    odom_topic: "navigation/odometry"
+    reference_topic: "/guidance/reference"
+    status_topic: "/mission/status"
+
+    # 4-point default box mission
+    waypoints_x: [0.0, 1.0, 1.0, 0.0]
+    waypoints_y: [0.0, 0.0, 1.0, 1.0]
+
+    # Completion and segment switching
+    acceptance_radius: 0.35
+    switch_alongtrack_margin: 0.10
+
+    # Speed scheduling (constant cruise clamped into [u_min, u_max])
+    u_cruise: 0.25
+    u_min: 0.05
+    u_max: 0.35
+
+    # Integral LOS parameters
+    lookahead: 0.80
+    ilos_ki: 0.05
+    ilos_int_limit: 2.0
+
