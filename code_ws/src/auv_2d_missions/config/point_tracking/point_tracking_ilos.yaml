@@ -1,0 +1,18 @@
+point_tracking_mission_2d_ilos:
+  ros__parameters:
+    odom_topic: "navigation/odometry"
+    reference_topic: "/guidance/reference"
+    status_topic: "/mission/status"
+
+    waypoints_x: [0.0, 1.0, 1.0, 0.0]
+    waypoints_y: [0.0, 0.0, 1.0, 1.0]
+
+    acceptance_radius: 0.35
+    switch_alongtrack_margin: 0.10
+    u_cruise: 0.25
+    u_min: 0.05
+    u_max: 0.35
+    lookahead: 0.80
+    ilos_ki: 0.05
+    ilos_int_limit: 2.0
+

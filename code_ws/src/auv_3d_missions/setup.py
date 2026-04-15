@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = "auv_2d_missions"
+package_name = "auv_3d_missions"
 
 setup(
     name=package_name,
@@ -21,13 +21,13 @@ setup(
     zip_safe=True,
     maintainer="aatmaj",
     maintainer_email="na22b018@smail.iitm.ac.in",
-    description="Mission-level guidance nodes for 2D AUV autonomy.",
+    description="Mission-level guidance nodes for 3D AUV autonomy.",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "point_tracking_mission_2d_ilos = auv_2d_missions.point_tracking.ilos:main",
-            "point_tracking_mission_2d_los = auv_2d_missions.point_tracking.los:main",
+            "point_tracking_mission_3d_ilos = auv_3d_missions.point_tracking.ilos:main",
+            "point_tracking_mission_3d_los = auv_3d_missions.point_tracking.los:main",
         ],
     },
 )

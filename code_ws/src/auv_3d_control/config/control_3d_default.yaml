@@ -1,0 +1,55 @@
+controller_3d:
+  ros__parameters:
+    odom_topic: "navigation/odometry"
+    reference_topic: "/guidance/reference_3d"
+    cmd_topic: "/control/cmd_vel_3d"
+
+    kp_u: 1.1
+    ki_u: 0.1
+    kd_u: 0.08
+    kp_v: 1.0
+    ki_v: 0.1
+    kd_v: 0.08
+    kp_w: 1.2
+    ki_w: 0.12
+    kd_w: 0.09
+    kp_roll: 1.2
+    ki_roll: 0.05
+    kd_roll: 0.2
+    kp_pitch: 1.4
+    ki_pitch: 0.08
+    kd_pitch: 0.25
+    kp_yaw: 1.6
+    ki_yaw: 0.06
+    kd_yaw: 0.25
+
+    u_integral_limit: 0.8
+    v_integral_limit: 0.8
+    w_integral_limit: 0.8
+    roll_integral_limit: 0.8
+    pitch_integral_limit: 0.8
+    yaw_integral_limit: 0.8
+
+    max_u_cmd: 0.45
+    max_v_cmd: 0.35
+    max_w_cmd: 0.30
+    max_roll_rate_cmd: 0.60
+    max_pitch_rate_cmd: 0.60
+    max_yaw_rate_cmd: 0.90
+
+thruster_allocator_3d:
+  ros__parameters:
+    cmd_topic: "/control/cmd_vel_3d"
+    thruster_topic: "/auv/thruster_cmd"
+    pwm_neutral: 1500
+    pwm_min: 1100
+    pwm_max: 1900
+    k_surge_pwm: 280.0
+    k_sway_pwm: 260.0
+    k_heave_pwm: 300.0
+    k_roll_pwm: 180.0
+    k_pitch_pwm: 220.0
+    k_yaw_pwm: 220.0
+    publish_rate_hz: 20.0
+    command_timeout_sec: 0.5
+
