@@ -1,0 +1,44 @@
+controller_2d:
+  ros__parameters:
+    odom_topic: "navigation/odometry"
+    reference_topic: "/guidance/reference"
+    cmd_topic: "/control/cmd_vel"
+
+    # PID/PID/PID gains (starter values for first water tuning)
+    kp_u: 1.0
+    ki_u: 0.1
+    kd_u: 0.08
+    kp_v: 1.0
+    ki_v: 0.1
+    kd_v: 0.08
+    kp_yaw: 1.5
+    ki_yaw: 0.05
+    kd_yaw: 0.25
+
+    # Output limits
+    max_surge_speed: 0.4
+    max_sway_speed: 0.3
+    max_yaw_rate: 0.8
+
+    # Integrator anti-windup clamp
+    u_integral_limit: 0.5
+    v_integral_limit: 0.5
+    yaw_integral_limit: 0.8
+
+thruster_allocator_2d:
+  ros__parameters:
+    cmd_topic: "/control/cmd_vel"
+    thruster_topic: "/auv/thruster_cmd"
+
+    pwm_neutral: 1500
+    pwm_min: 1100
+    pwm_max: 1900
+
+    # Mixer gains (cmd_vel -> PWM delta)
+    k_surge_pwm: 300.0
+    k_sway_pwm: 300.0
+    k_yaw_pwm: 220.0
+
+    publish_rate_hz: 20.0
+    command_timeout_sec: 0.5
+
