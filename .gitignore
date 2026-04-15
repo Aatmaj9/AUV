@@ -8,3 +8,4 @@ code_ws/log/
 *.zip
 *.AppImage
 MAV-GUI/
+kf_tests/run*/

@@ -34,9 +34,9 @@ from navigation.read_config import read_vessel_data
 
 def calculate_threshold(dt, n_actuators):
     th = np.full(15 + n_actuators, np.inf)
-    omg_der_var = 1.0**2
-    acc_der_var = 1.0**2
-    cov = np.diag([1, 1, 1, 1, 1, 1])
+    omg_der_var = 0.1 ** 2
+    acc_der_var = 0.5 ** 2
+    cov = np.zeros((6, 6))
     cov[0:3, 0:3] = omg_der_var * np.eye(3)
     cov[3:6, 3:6] = acc_der_var * np.eye(3)
     return th, cov
@@ -109,6 +109,7 @@ class NavigationFilterNode(Node):
         self._dvl_dr_R_to_ned = None
         self._dvl_dr_origin = None
         self._dvl_dr_initialized = False
+        self._dvl_dr_init_time = None
 
         self._sbg_latest_quat = None
         self._sbg_quat_lock = threading.Lock()
@@ -119,17 +120,35 @@ class NavigationFilterNode(Node):
         else:
             self.mahalanobis_gate = float(g)
 
-        self.seabed_z_ned = vessel.get("seabed_z_ned")
+        pool_depth = vessel.get("pool_depth")
+        dvl_depth = vessel.get("dvl_depth_from_surface")
+
+        if pool_depth is not None and dvl_depth is not None:
+            self._dvl_surface_offset = float(dvl_depth)
+            self.seabed_z_ned = float(pool_depth) - self._dvl_surface_offset
+            self.get_logger().info(
+                f"Pool depth={pool_depth}m, DVL submersion={dvl_depth}m "
+                f"→ seabed_z_ned={self.seabed_z_ned:.3f}m, "
+                f"depth sensor offset={-self._dvl_surface_offset:.3f}m"
+            )
+        elif vessel.get("seabed_z_ned") is not None:
+            self.seabed_z_ned = float(vessel["seabed_z_ned"])
+            self._dvl_surface_offset = 0.0
+            self.get_logger().info(
+                f"Using legacy seabed_z_ned={self.seabed_z_ned}m (no DVL surface offset)"
+            )
+        else:
+            self.seabed_z_ned = None
+            self._dvl_surface_offset = 0.0
+
         self._has_ping_range = any(
             s.get("sensor_type") == "PING_RANGE" for s in self.vessel["agents"][0]["sensors"]
         )
         if self._has_ping_range and self.seabed_z_ned is None:
             raise ValueError(
-                "vessel_data.yml: seabed_z_ned is required when using sensor_type PING_RANGE "
-                "(NED z of flat seabed, positive down from the same origin as vehicle z)."
+                "vessel_data.yml: pool_depth + dvl_depth_from_surface (or legacy seabed_z_ned) "
+                "required when using sensor_type PING_RANGE."
             )
-        if self.seabed_z_ned is not None:
-            self.get_logger().info(f"Flat seabed NED z (constant): seabed_z_ned = {self.seabed_z_ned} m")
 
         for sensor in self.vessel["agents"][0]["sensors"]:
             st = sensor["sensor_type"]
@@ -414,33 +433,43 @@ class NavigationFilterNode(Node):
         base = max(std**2, float(sensor.get("min_position_variance", 1e-4)))
         scale = float(sensor.get("position_variance_scale", 1.0))
         scale = max(scale, 1e-6)
+        drift_rate = float(sensor.get("dr_drift_rate", 0.0))
+        if self._dvl_dr_init_time is not None and drift_rate > 0:
+            elapsed = (self.get_clock().now().nanoseconds - self._dvl_dr_init_time) * 1e-9
+            base += drift_rate * elapsed
         R = np.eye(3) * (base * scale)
         if sensor.get("use_custom_covariance"):
             R = np.array(sensor["custom_covariance"]["position_covariance"]).reshape(3, 3)
 
         with self._ekf_lock:
             if not self._dvl_dr_initialized:
-                self._dvl_dr_origin = y_raw.copy()
                 dvl_yaw = float(msg.yaw) * (np.pi / 180.0)
-                if self._imu_init_yaw is not None:
-                    delta_psi = self._imu_init_yaw - dvl_yaw
-                    c, s = np.cos(delta_psi), np.sin(delta_psi)
-                    self._dvl_dr_R_to_ned = np.array([
-                        [ c, -s,  0.0],
-                        [ s,  c,  0.0],
-                        [0.0, 0.0, 1.0],
-                    ])
-                    self.get_logger().info(
-                        f"DVL DR→NED: IMU yaw={np.degrees(self._imu_init_yaw):.1f}°, "
-                        f"DVL yaw={np.degrees(dvl_yaw):.1f}°, "
-                        f"delta={np.degrees(delta_psi):.1f}°"
-                    )
-                else:
-                    self._dvl_dr_R_to_ned = np.eye(3)
+                with self._sbg_quat_lock:
+                    quat_now = self._sbg_latest_quat
+                if quat_now is None:
                     self.get_logger().warn(
-                        "DVL DR received before IMU init; assuming DVL NED = global NED (no rotation)."
+                        "DVL DR received before SBG quat; deferring DR init."
                     )
+                    return
+                self._dvl_dr_origin = y_raw.copy()
+                q = quat_now.quaternion
+                sbg_quat = np.array([q.w, q.x, q.y, q.z])
+                sbg_eul = quat_to_eul(sbg_quat)
+                sbg_yaw_now = float(sbg_eul[2])
+                delta_psi = sbg_yaw_now - dvl_yaw
+                c, s = np.cos(delta_psi), np.sin(delta_psi)
+                self._dvl_dr_R_to_ned = np.array([
+                    [ c, -s,  0.0],
+                    [ s,  c,  0.0],
+                    [0.0, 0.0, 1.0],
+                ])
+                self.get_logger().info(
+                    f"DVL DR→NED: SBG yaw={np.degrees(sbg_yaw_now):.1f}°, "
+                    f"DVL yaw={np.degrees(dvl_yaw):.1f}°, "
+                    f"delta={np.degrees(delta_psi):.1f}°"
+                )
                 self._dvl_dr_initialized = True
+                self._dvl_dr_init_time = self.get_clock().now().nanoseconds
                 y_ned = self._dvl_dr_to_ned(y_raw)
                 self.ekf.x[0:3] = y_ned.reshape(3, 1)
                 if self.first_pos_flag:
@@ -469,7 +498,7 @@ class NavigationFilterNode(Node):
             return
         sign_scale = float(sensor.get("sign_scale", 1.0))
         z_off = float(sensor.get("z_offset", 0.0))
-        y = np.array([[sign_scale * depth_metres + z_off]])
+        y = np.array([[sign_scale * depth_metres + z_off - self._dvl_surface_offset]])
         r_bs_b = np.array(sensor["sensor_location"])
         Theta_bs = np.array(sensor["sensor_orientation"])
         var = float(sensor.get("default_variance", 0.05))

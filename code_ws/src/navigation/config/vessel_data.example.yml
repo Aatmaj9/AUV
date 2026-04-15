@@ -7,7 +7,15 @@
 # (tune per application; leave unset to disable gating).
 # mahalanobis_gate: 25.0
 #
-seabed_z_ned: 3.0
+# Pool / tank geometry (easy to measure):
+#   pool_depth            — total depth from water surface to bottom (metres)
+#   dvl_depth_from_surface — how far the DVL is below the water surface when AUV floats (metres)
+#
+# The EKF's GCS origin is at the DVL start position, which is already submerged.
+# These two values let the node convert surface-referenced sensors (depth, altimeter)
+# into the DVL-referenced GCS frame automatically.
+pool_depth: 3
+dvl_depth_from_surface: 0.45
 
 time_step: 0.1
 gps_datum: [0.0, 0.0, 0.0]
@@ -25,30 +33,30 @@ agents:
       - sensor_type: IMU_SBG
         sensor_topic: /sbg/imu_data
         quat_topic: /sbg/ekf_quat
-        sensor_location: [0.3591, 0.0, 0.0]
+        sensor_location: [0.0, 0.0, -0.3591]
         sensor_orientation: [0.0, 0.0, 0.0]
-        default_gyro_variance: 0.02
-        default_accel_variance: 0.1
+        default_gyro_variance: 0.001
+        default_accel_variance: 0.005
       - sensor_type: ARDUINO_DEPTH
         sensor_topic: /auv/depth
-        sensor_location: [-0.371978, 0.0, 0.360633]
+        sensor_location: [-0.371978, 0.0, -0.360633]
         sensor_orientation: [0.0, 0.0, 0.0]
         sign_scale: 1.0
-        z_offset: 0.0
-        default_variance: 0.15
+        default_variance: 0.005
       - sensor_type: DVL
         sensor_topic: /dvl/data
         sensor_location: [0.0, 0.0, 0.0]
         sensor_orientation: [0.0, 0.0, 0.0]
-        default_velocity_variance: 0.05
+        default_velocity_variance: 0.0005
       - sensor_type: DVL_DR
         sensor_topic: /dvl/position
         sensor_location: [0.0, 0.0, 0.0]
         sensor_orientation: [0.0, 0.0, 0.0]
-        min_position_variance: 0.5
-        position_variance_scale: 2.0
+        min_position_variance: 0.005
+        position_variance_scale: 1.0
+        dr_drift_rate: 0.001
       - sensor_type: PING_RANGE
         sensor_topic: /ping1d/range
-        sensor_location: [-0.307062, 0.0, 0.14738]
+        sensor_location: [-0.307062, 0.0, -0.11]
         sensor_orientation: [0.0, 0.0, 0.0]
-        default_variance: 0.04
+        default_variance: 0.001
