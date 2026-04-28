@@ -8,7 +8,7 @@ Usage:
 
 Runs: EKF with DR, EKF without DR, heading diagnostic.
 Saves plots and a text summary into the run's folder (e.g. kf_tests/run3/).
-Config is read from vessel_data.example.yml — no hardcoded sensor params.
+Config is read from the current auv_navigation vessel_data.example.yml — no hardcoded sensor params.
 """
 
 import sys
@@ -30,7 +30,7 @@ import yaml
 # ---------------------------------------------------------------------------
 KF_TESTS = Path(__file__).resolve().parent
 REPO_ROOT = KF_TESTS.parent
-NAV_SRC = str(REPO_ROOT / "code_ws" / "src" / "navigation")
+NAV_SRC = str(REPO_ROOT / "code_ws" / "src" / "auv_navigation")
 sys.path.insert(0, NAV_SRC)
 
 from navigation.ekf_nav import NavEKF
@@ -66,9 +66,9 @@ if not BAG_DIR.is_dir():
     sys.exit(1)
 
 # ---------------------------------------------------------------------------
-# Load config from vessel_data.example.yml
+# Load config from auv_navigation vessel_data.example.yml
 # ---------------------------------------------------------------------------
-CONFIG_PATH = REPO_ROOT / "code_ws" / "src" / "navigation" / "config" / "vessel_data.example.yml"
+CONFIG_PATH = REPO_ROOT / "code_ws" / "src" / "auv_navigation" / "config" / "vessel_data.example.yml"
 with open(CONFIG_PATH) as f:
     vessel = yaml.safe_load(f)
 
@@ -124,6 +124,7 @@ print(f"  Duration: {duration_s:.1f}s")
 
 has_dvl_dr = "/dvl/position" in topics_seen
 has_ping = "/ping1d/range" in topics_seen
+has_dvl_dr_sensor = "DVL_DR" in SENSORS
 t0_ns = messages[0][0]
 
 
@@ -248,6 +249,8 @@ def run_ekf(use_dvl_dr=True):
 
         # ---- DVL dead reckoning ----
         if topic == "/dvl/position":
+            if not has_dvl_dr_sensor:
+                continue
             sensor = SENSORS["DVL_DR"]
             y_raw = np.array([msg.position.x, msg.position.y, msg.position.z])
             r_bs_b = np.array(sensor["sensor_location"])
@@ -366,14 +369,22 @@ summary_lines.append("")
 print(f"\n{'=' * 60}")
 print("TEST 1: EKF WITH DVL DR")
 print(f"{'=' * 60}")
-r_dr = run_ekf(use_dvl_dr=True)
+if has_dvl_dr and not has_dvl_dr_sensor:
+    print("  /dvl/position exists in the bag, but DVL_DR is not present in the current vessel config.")
+    print("  Replaying without DVL DR updates so the test matches the current navigation config.")
+    summary_lines.append("EKF WITH DVL DR:")
+    summary_lines.append("  Skipped DVL DR updates because DVL_DR is absent from the current vessel config.")
+    r_dr = run_ekf(use_dvl_dr=False)
+else:
+    r_dr = run_ekf(use_dvl_dr=True)
 print(f"  Final pos: N={r_dr['hist_x'][-1,0]:.3f}, E={r_dr['hist_x'][-1,1]:.3f}, D={r_dr['hist_x'][-1,2]:.3f} m")
 print(f"  Final euler: roll={np.degrees(r_dr['hist_x'][-1,3]):.1f}, pitch={np.degrees(r_dr['hist_x'][-1,4]):.1f}, yaw={np.degrees(r_dr['hist_x'][-1,5]):.1f} deg")
 print(f"  Final 1σ: N={np.sqrt(r_dr['hist_P'][-1,0]):.3f}, E={np.sqrt(r_dr['hist_P'][-1,1]):.3f}, D={np.sqrt(r_dr['hist_P'][-1,2]):.3f} m")
 has_nan = np.any(np.isnan(r_dr["hist_x"])) or np.any(np.isnan(r_dr["hist_P"]))
 print(f"  NaN detected: {has_nan}")
 
-summary_lines.append("EKF WITH DVL DR:")
+if not (has_dvl_dr and not has_dvl_dr_sensor):
+    summary_lines.append("EKF WITH DVL DR:")
 summary_lines.append(f"  Final pos: N={r_dr['hist_x'][-1,0]:.3f}, E={r_dr['hist_x'][-1,1]:.3f}, D={r_dr['hist_x'][-1,2]:.3f} m")
 summary_lines.append(f"  Final 1σ: N={np.sqrt(r_dr['hist_P'][-1,0]):.3f}, E={np.sqrt(r_dr['hist_P'][-1,1]):.3f}, D={np.sqrt(r_dr['hist_P'][-1,2]):.3f} m")
 

@@ -128,7 +128,15 @@ class PointTrackingMission3dIlos(Node):
         rx, ry, rz = self._x - x0, self._y - y0, self._z - z0
         along = tx * rx + ty * ry + tz * rz
         ex, ey, ez = rx - along * tx, ry - along * ty, rz - along * tz
-        e_xy = math.sqrt(ex * ex + ey * ey)
+
+        # Use signed horizontal cross-track so integral yaw correction preserves side-of-path information.
+        hlen = math.hypot(sx, sy)
+        if hlen > 1e-6:
+            hx, hy = sx / hlen, sy / hlen
+            e_xy_signed = -hy * rx + hx * ry
+        else:
+            e_xy_signed = 0.0
+        e_xy_abs = math.hypot(ex, ey)
 
         if along >= sl - switch_margin:
             self._idx += 1
@@ -143,11 +151,11 @@ class PointTrackingMission3dIlos(Node):
             self._z_int_z *= 0.5
             return
 
-        self._z_int_xy = clamp(self._z_int_xy + e_xy * dt, -lim_xy, lim_xy)
+        self._z_int_xy = clamp(self._z_int_xy + e_xy_signed * dt, -lim_xy, lim_xy)
         self._z_int_z = clamp(self._z_int_z + ez * dt, -lim_z, lim_z)
 
         chi = math.atan2(sy, sx)
-        psi_d = chi - math.atan2(e_xy + ki_xy * self._z_int_xy, max(1e-3, look_xy))
+        psi_d = chi - math.atan2(e_xy_signed + ki_xy * self._z_int_xy, max(1e-3, look_xy))
         theta_d = math.atan2(-(ez + ki_z * self._z_int_z), max(1e-3, look_z))
 
         w_gain = float(self.get_parameter("w_gain").value)
@@ -157,7 +165,7 @@ class PointTrackingMission3dIlos(Node):
         self._publish_reference(u_d, 0.0, w_d, 0.0, theta_d, psi_d)
         self._publish_status(
             f"point_tracking_3d_ilos: leg={i0 + 1}->{i1 + 1}/{len(self._waypoints)} "
-            f"cross_xy={e_xy:.2f}m cross_z={ez:.2f}m"
+            f"cross_xy={e_xy_signed:.2f}m |abs|={e_xy_abs:.2f}m cross_z={ez:.2f}m"
         )
 
 
@@ -169,4 +177,3 @@ def main(args=None) -> None:
     finally:
         node.destroy_node()
         rclpy.shutdown()
-

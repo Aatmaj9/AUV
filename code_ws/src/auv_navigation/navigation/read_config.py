@@ -14,7 +14,7 @@ def read_vessel_data(file_path: Optional[str] = None) -> Dict[str, Any]:
         try:
             from ament_index_python.packages import get_package_share_directory
 
-            share = get_package_share_directory("navigation")
+            share = get_package_share_directory("auv_navigation")
             candidate = os.path.join(share, "config", "vessel_data.example.yml")
             if os.path.isfile(candidate):
                 file_path = candidate
@@ -24,7 +24,7 @@ def read_vessel_data(file_path: Optional[str] = None) -> Dict[str, Any]:
     if file_path is None or not os.path.isfile(file_path):
         raise FileNotFoundError(
             "Set AUV_VESSEL_DATA to vessel_data.yml, pass vessel_data_file param, or install "
-            "navigation share config."
+            "auv_navigation share config."
         )
 
     with open(file_path, "r", encoding="utf-8") as f:

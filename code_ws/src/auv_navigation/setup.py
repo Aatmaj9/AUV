@@ -3,7 +3,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = "navigation"
+package_name = "auv_navigation"
 
 setup(
     name=package_name,

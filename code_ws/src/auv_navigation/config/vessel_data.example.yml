@@ -1,6 +1,6 @@
-# Example vessel file for package `navigation` (same schema as auv_navigation).
+# Example vessel file for package `auv_navigation`.
 #
-#   ros2 run navigation navigation_node --ros-args -p vessel_data_file:=/path/to/vessel_data.yml
+#   ros2 run auv_navigation navigation_node --ros-args -p vessel_data_file:=/path/to/vessel_data.yml
 # or set AUV_VESSEL_DATA.
 #
 # Optional: reject measurement updates when Mahalanobis distance^2 exceeds this value
