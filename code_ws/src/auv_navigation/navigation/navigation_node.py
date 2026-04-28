@@ -652,7 +652,11 @@ def main():
     finally:
         executor.shutdown()
         nav.destroy_node()
-        rclpy.shutdown()
+        # Can already be shutdown when SIGINT propagates via rclpy internals.
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
