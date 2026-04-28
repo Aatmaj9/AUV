@@ -10,6 +10,7 @@ from geometry_msgs.msg import Quaternion
 from nav_msgs.msg import Odometry
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sbg_driver.msg import SbgEkfQuat, SbgImuData
 from sensor_msgs.msg import Imu, JointState, Range
 from std_msgs.msg import Float32, Float64MultiArray
@@ -188,14 +189,16 @@ class NavigationFilterNode(Node):
                 def dvl_msg_cb(msg, s=sensor):
                     self.dvl_a50_callback(msg, s)
 
-                self.create_subscription(DVL, topic, dvl_msg_cb, 10)
+                # DVL drivers commonly publish BEST_EFFORT; match QoS to avoid dropping all messages.
+                self.create_subscription(DVL, topic, dvl_msg_cb, qos_profile_sensor_data)
 
             elif st == "DVL_DR":
 
                 def dr_cb(msg, s=sensor):
                     self.dvl_dr_callback(msg, s)
 
-                self.create_subscription(DVLDR, topic, dr_cb, 10)
+                # DVL DR is also typically BEST_EFFORT.
+                self.create_subscription(DVLDR, topic, dr_cb, qos_profile_sensor_data)
 
             elif st == "encoders":
                 field = sensor.get("value_field", "position")
